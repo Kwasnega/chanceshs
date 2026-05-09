@@ -1,26 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Colors */
+  --color-primary: #F5A623;
+  --color-primary-hover: #E0941A;
+  --color-secondary: #0F172A;
+  --color-background: #FAFAFA;
+  --color-surface: #FFFFFF;
+  
+  /* Text */
+  --color-text-main: #0F172A; /* Dark Navy for text */
+  --color-text-muted: #64748B; /* Slate */
+  
+  /* Confidence */
+  --color-success: #10B981; /* Emerald */
+  --color-warning: #F5A623; /* Amber */
+  --color-danger: #F43F5E;  /* Rose */
+  
+  /* Borders & Shadows */
+  --color-border: #E2E8F0;
+  --shadow-sm: 0 2px 8px -2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 16px -4px rgba(15, 23, 42, 0.05);
+  --shadow-premium: 0 20px 40px -10px rgba(15, 23, 42, 0.08);
+  
+  /* Radius */
+  --radius-sm: 8px; /* inner elements */
+  --radius-md: 12px; /* cards */
+  --radius-lg: 24px; /* outer containers/modals */
+  --radius-full: 9999px; /* tags */
+  
+  /* Fonts */
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Outfit', sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  background-color: var(--color-background);
+  color: var(--color-text-main);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  line-height: 1.2;
+  color: var(--color-secondary);
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: var(--font-body);
+  border: none;
+  cursor: pointer;
+  background: none;
+  outline: none;
+}
+
+/* Base Utility Classes */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* Base Buttons */
+.btn-primary, .btn-ghost, .btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease-out;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: 0 4px 14px 0 rgba(245, 166, 35, 0.25);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px 0 rgba(245, 166, 35, 0.3);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-ghost {
+  color: var(--color-secondary);
+}
+
+.btn-ghost:hover {
+  background-color: #F1F5F9;
+}
+
+.btn-outline {
+  color: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.btn-outline:hover {
+  border-color: var(--color-text-muted);
+}
+
+/* Custom Utilities */
+.border-bottom {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bg-amber-100 { background-color: rgba(245, 166, 35, 0.1); }
+.text-amber-700 { color: #B45309; }
+
+/* Animations */
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Mobile Tweaks */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  
+  h1 { font-size: 2.75rem !important; }
+  h2 { font-size: 2.25rem !important; }
+}
+
+/* Global Spacing Fixes */
+main {
+  overflow-x: hidden;
+}
+
+section {
+  padding-left: 0;
+  padding-right: 0;
 }
