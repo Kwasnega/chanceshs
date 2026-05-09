@@ -3,6 +3,8 @@ import { calculateProbability } from '@/services/predictionEngine';
 import { rtdb } from '@/lib/firebase';
 import { ref, get } from 'firebase/database';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const { aggregate, schools, course } = await request.json();
