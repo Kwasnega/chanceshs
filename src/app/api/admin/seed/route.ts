@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { rtdb } from '@/lib/firebase';
-import { ref, set } from 'firebase/database';
 import * as XLSX from 'xlsx';
 import path from 'path';
 import fs from 'fs';
@@ -118,6 +116,10 @@ export async function GET() {
       };
     });
 
+    // Dynamically import Firebase only when needed
+    const { rtdb } = await import('@/lib/firebase');
+    const { ref, set } = await import('firebase/database');
+    
     const schoolsRef = ref(rtdb, 'schools');
     await set(schoolsRef, schoolsData);
 

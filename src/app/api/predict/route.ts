@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { calculateProbability } from '@/services/predictionEngine';
-import { rtdb } from '@/lib/firebase';
-import { ref, get } from 'firebase/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +10,10 @@ export async function POST(request: Request) {
     if (!aggregate || !schools || !Array.isArray(schools)) {
       return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
     }
+
+    // Dynamically import Firebase only when needed
+    const { rtdb } = await import('@/lib/firebase');
+    const { ref, get } = await import('firebase/database');
 
     const results = await Promise.all(schools.map(async (school: any) => {
       const schoolRef = ref(rtdb, `schools/${school.id}`);
