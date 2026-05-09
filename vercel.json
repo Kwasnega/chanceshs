@@ -1,6 +1,3 @@
 {
-  "buildCommand": "cd chanceshs-next && npm run build",
-  "outputDirectory": "chanceshs-next/.next",
-  "framework": "nextjs",
-  "installCommand": "cd chanceshs-next && npm install"
+  "framework": "nextjs"
 }
