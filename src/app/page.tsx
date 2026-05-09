@@ -6,8 +6,13 @@ import { motion } from 'framer-motion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ChevronRight, Play, Star, ShieldCheck, Target, TrendingUp, Users, MessageSquare, Sparkles, CheckCircle2 } from 'lucide-react';
-import ThreeBackground from '@/components/ThreeBackground';
+import dynamic from 'next/dynamic';
 import './Home.css';
+
+const ThreeBackground = dynamic(() => import('@/components/ThreeBackground'), {
+  ssr: false,
+  loading: () => null
+});
 
 gsap.registerPlugin(ScrollTrigger);
 

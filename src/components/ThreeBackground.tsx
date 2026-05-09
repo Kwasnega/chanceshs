@@ -7,7 +7,7 @@ export default function ThreeBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || typeof window === 'undefined') return;
 
     // Setup
     const scene = new THREE.Scene();
@@ -52,15 +52,20 @@ export default function ThreeBackground() {
 
     // Handle Resize
     const handleResize = () => {
+      if (typeof window === 'undefined') return;
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
 
-    window.addEventListener('resize', handleResize);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+    }
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize);
+      }
       containerRef.current?.removeChild(renderer.domElement);
     };
   }, []);

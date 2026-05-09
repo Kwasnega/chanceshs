@@ -1,12 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Search, Lock, ShieldCheck, Share2, TrendingUp, Target, Clock, X, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { usePaystackPayment } from 'react-paystack';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { useCalculatorStore } from '@/store/useCalculatorStore';
 import './CalculatorFlow.css';
 
@@ -20,19 +17,25 @@ export default function CalculatorFlow() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [email, setEmail] = useState('');
-  
+  const [initializePayment, setInitializePayment] = useState<any>(null);
+
   const liveAggregate = Object.values(grades).reduce((acc, curr) => acc + parseInt(curr as any), 0);
 
-  // Paystack Config
-  const config = {
-    reference: (new Date()).getTime().toString(),
-    email: email || 'user@chanceshs.com',
-    amount: 2000, // GHS 20.00 in kobo/pesewas
-    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-    currency: 'GHS'
-  };
-
-  const initializePayment = usePaystackPayment(config);
+  // Dynamically import Paystack
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('react-paystack').then(({ usePaystackPayment }) => {
+        const config = {
+          reference: (new Date()).getTime().toString(),
+          email: email || 'user@chanceshs.com',
+          amount: 2000, // GHS 20.00 in kobo/pesewas
+          publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+          currency: 'GHS'
+        };
+        setInitializePayment(() => usePaystackPayment(config));
+      });
+    }
+  }, [email]);
 
   const handlePayment = () => {
     if (!email || !email.includes('@')) {
@@ -95,6 +98,9 @@ export default function CalculatorFlow() {
     
     setIsLoading(true);
     try {
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).default;
+      
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
@@ -497,7 +503,9 @@ export default function CalculatorFlow() {
                 <button 
                   onClick={() => {
                     const text = `🎯 *ChanceSHS Placement Prediction*%0A%0AI just checked my SHS placement chances!%0A%0A📊 *Aggregate:* ${liveAggregate < 10 ? '0'+liveAggregate : liveAggregate}%0A📚 *Course:* ${course}%0A%0A✅ *Results:*%0A${results.slice(0,3).map(r => `• ${r.schoolName}: ${r.locked && !isPremium ? '🔒 Locked' : r.probability + '% (' + r.matchType + ')'}`).join('%0A')}%0A%0ACheck yours now: https://chanceshs.com`;
-                    window.open(`https://wa.me/?text=${text}`, '_blank');
+                    if (typeof window !== 'undefined') {
+                      window.open(`https://wa.me/?text=${text}`, '_blank');
+                    }
                   }}
                   className="whatsapp-btn"
                 >

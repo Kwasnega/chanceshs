@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface Grades {
   math: number;
@@ -27,6 +27,10 @@ interface CalculatorState {
   setSelectedSchools: (schools: School[]) => void;
   reset: () => void;
 }
+
+const storage = typeof window !== 'undefined' 
+  ? createJSONStorage(() => localStorage)
+  : undefined;
 
 export const useCalculatorStore = create<CalculatorState>()(
   persist(
@@ -56,6 +60,7 @@ export const useCalculatorStore = create<CalculatorState>()(
     }),
     {
       name: 'chanceshs-calculator-storage',
+      storage: storage,
     }
   )
 );
