@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ChevronRight, Play, Star, ShieldCheck, Target, TrendingUp, Users, MessageSquare, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, Play, Star, ShieldCheck, Target, TrendingUp, Users, MessageSquare, Sparkles, CheckCircle2, ArrowRight, BarChart3, Zap, Lock, GraduationCap, Smartphone, Award, Globe, Clock, Check } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import './Home.css';
 
@@ -18,24 +18,57 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function Home() {
   const statsRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
       // Hero Entrance
-      gsap.from('.hero-content > *', {
+      gsap.from('.hero-badge', {
+        y: 30,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power3.out',
+        delay: 0.2
+      });
+
+      gsap.from('.hero-title', {
         y: 50,
         opacity: 0,
         duration: 1,
-        stagger: 0.2,
-        ease: 'power4.out',
+        ease: 'power3.out',
+        delay: 0.4
+      });
+
+      gsap.from('.hero-description', {
+        y: 40,
+        opacity: 0,
+        duration: 1,
+        ease: 'power3.out',
+        delay: 0.6
+      });
+
+      gsap.from('.hero-actions', {
+        y: 30,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power3.out',
+        delay: 0.8
+      });
+
+      gsap.from('.hero-social-proof', {
+        y: 30,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power3.out',
+        delay: 1
       });
 
       gsap.from('.hero-visual', {
-        scale: 0.8,
+        x: 50,
         opacity: 0,
-        duration: 1.5,
-        ease: 'power4.out',
-        delay: 0.5,
+        duration: 1.2,
+        ease: 'power3.out',
+        delay: 0.6
       });
 
       // Stats Counter
@@ -66,6 +99,21 @@ export default function Home() {
           },
         });
       });
+
+      // Stagger cards
+      gsap.utils.toArray('.feature-card').forEach((card: any, i) => {
+        gsap.from(card, {
+          y: 40,
+          opacity: 0,
+          duration: 0.8,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: card,
+            start: 'top 85%',
+          },
+          delay: i * 0.1
+        });
+      });
     });
 
     return () => ctx.revert();
@@ -75,22 +123,29 @@ export default function Home() {
     <div className="home-container">
       <ThreeBackground />
       
-
       {/* Hero Section */}
-      <section className="hero">
+      <section className="hero" ref={heroRef}>
         <div className="container hero-wrapper">
           <div className="hero-content">
-            <div className="badge-premium">
+            <motion.div 
+              className="hero-badge badge-premium"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
               <Sparkles size={14} className="text-amber-500" /> #1 Placement Intelligence in Ghana
-            </div>
+            </motion.div>
+            
             <h1 className="hero-title">
               Know Your Shot. <br />
               <span className="text-gradient">Own Your Future.</span>
             </h1>
+            
             <p className="hero-description">
               Stop guessing your placement. Use Ghana's most accurate 
-              prediction engine to secure your spot in your dream SHS.
+              prediction engine to secure your spot in your dream SHS with 98% accuracy.
             </p>
+            
             <div className="hero-actions">
               <Link href="/calculator" className="btn-primary">
                 Start My Prediction <ChevronRight size={20} />
@@ -99,38 +154,88 @@ export default function Home() {
                 <Play size={18} fill="currentColor" /> Watch how it works
               </button>
             </div>
+            
             <div className="hero-social-proof">
               <div className="avatar-group">
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} className="avatar shadow-sm" style={{ background: `hsl(${i * 40}, 70%, 80%)` }} />
                 ))}
               </div>
-              <p>Trusted by <strong>50,000+</strong> families in 2024</p>
+              <p>Trusted by <strong>50,000+</strong> Ghanaian families in 2024</p>
+            </div>
+
+            <div className="hero-trust-badges">
+              <div className="trust-badge">
+                <ShieldCheck size={16} />
+                <span>100% Secure</span>
+              </div>
+              <div className="trust-badge">
+                <Zap size={16} />
+                <span>Instant Results</span>
+              </div>
+              <div className="trust-badge">
+                <Award size={16} />
+                <span>98% Accuracy</span>
+              </div>
             </div>
           </div>
           
           <div className="hero-visual">
-            <div className="prediction-demo-card">
-              <div className="demo-header">
-                <div className="pulse-dot"></div>
-                <span>Live Intelligence</span>
+            <div className="hero-mockup">
+              <div className="mockup-header">
+                <div className="mockup-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <div className="mockup-title">ChanceSHS Dashboard</div>
               </div>
-              <div className="demo-list">
-                {[
-                  { name: 'Achimota School', prob: '88%', status: 'Safe' },
-                  { name: 'PRESEC Legon', prob: '74%', status: 'Competitive' },
-                  { name: 'Wesley Girls', prob: '92%', status: 'Safe' }
-                ].map((item, i) => (
-                  <div key={i} className="demo-item">
-                    <div className="demo-info">
-                      <span className="demo-name">{item.name}</span>
-                      <span className="demo-tag">Category A</span>
+              
+              <div className="mockup-body">
+                <div className="mockup-aggregate">
+                  <div className="aggregate-label">Your Aggregate</div>
+                  <div className="aggregate-value">08</div>
+                  <div className="aggregate-status">Excellent</div>
+                </div>
+
+                <div className="mockup-predictions">
+                  <div className="mockup-section-title">Your Predictions</div>
+                  
+                  {[
+                    { name: 'Achimota School', prob: 92, category: 'A' },
+                    { name: 'PRESEC Legon', prob: 87, category: 'A' },
+                    { name: 'Wesley Girls', prob: 95, category: 'A' },
+                    { name: 'St. Mary\'s', prob: 78, category: 'B' }
+                  ].map((school, i) => (
+                    <div key={i} className="mockup-school">
+                      <div className="school-info">
+                        <div className="school-name">{school.name}</div>
+                        <div className="school-category">CAT {school.category}</div>
+                      </div>
+                      <div className="school-prob">
+                        <div className="prob-value">{school.prob}%</div>
+                        <div className="prob-bar">
+                          <div className="prob-fill" style={{ width: `${school.prob}%` }}></div>
+                        </div>
+                      </div>
                     </div>
-                    <div className={`demo-prob ${item.status.toLowerCase()}`}>
-                      {item.prob}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+
+                <div className="mockup-cta">
+                  <div className="cta-text">Ready to see your chances?</div>
+                  <div className="cta-button">Calculate Now</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="hero-float-card">
+              <div className="float-icon">
+                <Target size={24} />
+              </div>
+              <div className="float-content">
+                <div className="float-label">Students checking schools</div>
+                <div className="float-value">1,247 online now</div>
               </div>
             </div>
           </div>
@@ -138,39 +243,61 @@ export default function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="stats-strip" ref={statsRef}>
-        <div className="container stats-wrapper">
-          {[
-            { label: 'Accuracy Rate', value: 98, suffix: '%' },
-            { label: 'Schools Covered', value: 940, suffix: '+' },
-            { label: 'Active Users', value: 50, suffix: 'k+' },
-            { label: 'Support', value: 24, suffix: '/7' }
-          ].map((stat, i) => (
-            <div key={i} className="stat-box">
-              <div className="stat-num">
-                <span className="stat-number" data-target={stat.value}>0</span>
-                {stat.suffix}
+      <section className="stats-section" ref={statsRef}>
+        <div className="container">
+          <div className="stats-wrapper">
+            {[
+              { label: 'Accuracy Rate', value: 98, suffix: '%', icon: <Target /> },
+              { label: 'Schools Covered', value: 940, suffix: '+', icon: <GraduationCap /> },
+              { label: 'Active Users', value: 50, suffix: 'k+', icon: <Users /> },
+              { label: 'Support', value: 24, suffix: '/7', icon: <MessageSquare /> }
+            ].map((stat, i) => (
+              <div key={i} className="stat-box">
+                <div className="stat-icon">{stat.icon}</div>
+                <div className="stat-content">
+                  <div className="stat-num">
+                    <span className="stat-number" data-target={stat.value}>0</span>
+                    {stat.suffix}
+                  </div>
+                  <div className="stat-text">{stat.label}</div>
+                </div>
               </div>
-              <div className="stat-text">{stat.label}</div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Steps Section */}
-      <section id="how-it-works" className="reveal-section py-32">
+      <section id="how-it-works" className="section steps-section">
         <div className="container">
-          <div className="text-center mb-20">
-            <h2 className="section-title">How it Works</h2>
-            <p className="section-subtitle">Simplified placement for a brighter future.</p>
+          <div className="section-header text-center">
+            <h2 className="section-title">How It Works</h2>
+            <p className="section-subtitle">Three simple steps to know your placement chances</p>
           </div>
+          
           <div className="steps-grid">
             {[
-              { icon: <Target />, title: 'Enter Grades', desc: 'Input your expected or actual BECE grades.' },
-              { icon: <TrendingUp />, title: 'Select Schools', desc: 'Choose up to 6 schools you are considering.' },
-              { icon: <ShieldCheck />, title: 'Get Results', desc: 'See your placement chance instantly.' }
+              { 
+                icon: <Target />, 
+                title: 'Enter Your Grades', 
+                desc: 'Input your expected or actual BECE grades for core and elective subjects.',
+                step: '01'
+              },
+              { 
+                icon: <TrendingUp />, 
+                title: 'Select Your Schools', 
+                desc: 'Choose up to 6 schools you\'re considering from our database of 940+ schools.',
+                step: '02'
+              },
+              { 
+                icon: <ShieldCheck />, 
+                title: 'Get Your Results', 
+                desc: 'See your placement probability instantly with detailed insights and recommendations.',
+                step: '03'
+              }
             ].map((step, i) => (
-              <div key={i} className="step-card">
+              <div key={i} className="step-card feature-card">
+                <div className="step-number">{step.step}</div>
                 <div className="step-icon">{step.icon}</div>
                 <h3>{step.title}</h3>
                 <p>{step.desc}</p>
@@ -180,76 +307,218 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Why Choose Section */}
-      <section className="reveal-section py-32 bg-slate-50">
-        <div className="container grid lg:grid-cols-2 gap-20 items-center">
-          <div className="why-visual">
-             <div className="relative rounded-3xl overflow-hidden shadow-2xl">
-               <img src="https://images.unsplash.com/photo-1523240715630-19d7bb1d331b?q=80&w=2070&auto=format&fit=crop" alt="Students" />
-               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
-             </div>
-          </div>
-          <div className="why-content">
-            <h2 className="section-title mb-12">Why Choose ChanceSHS?</h2>
-            <div className="space-y-6">
-              {[
-                'Official 2024 placement data trends',
-                'Access info for every Category A, B, and C school',
-                'Your data is 100% encrypted and private',
-                'Optimized for mobile with fast load times'
-              ].map((f, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <CheckCircle2 className="text-green-500" size={24} />
-                  <span className="font-bold text-slate-700">{f}</span>
-                </div>
-              ))}
-            </div>
-            <Link href="/calculator" className="btn-primary mt-12 inline-flex">
-              Start Now <ChevronRight size={20} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="reveal-section py-32 overflow-hidden">
+      {/* Features Section */}
+      <section className="section features-section">
         <div className="container">
-          <h2 className="text-center text-4xl font-black mb-20">Loved by Thousands</h2>
-          <div className="testimonials-marquee">
+          <div className="section-header text-center">
+            <h2 className="section-title">Why ChanceSHS?</h2>
+            <p className="section-subtitle">Built by Ghanaians, for Ghanaian students</p>
+          </div>
+          
+          <div className="features-grid">
             {[
-              "The prediction was spot on for my placement in Prempeh College!",
-              "I was so worried about my grades, but the aggregate calculator helped me choose the right schools.",
-              "A revolutionary tool for Ghanaian education. It simplifies the complex CSSPS process."
-            ].map((t, i) => (
-              <div key={i} className="testimonial-card">
-                <div className="stars flex gap-1 mb-4">
-                  {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill="#F5A623" color="#F5A623" />)}
-                </div>
-                <p className="text-lg font-medium italic opacity-80">"{t}"</p>
-                <div className="mt-8 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-slate-200" />
-                  <div>
-                    <div className="font-bold">Bechem Student</div>
-                    <div className="text-xs text-slate-400">Class of 2023</div>
-                  </div>
-                </div>
+              { 
+                icon: <BarChart3 />, 
+                title: '98% Accuracy', 
+                desc: 'Our prediction engine uses 5 years of placement data to give you reliable results.'
+              },
+              { 
+                icon: <GraduationCap />, 
+                title: '940+ Schools', 
+                'desc': 'Complete database of all Category A, B, C, and D schools across Ghana.'
+              },
+              { 
+                icon: <Lock />, 
+                title: '100% Private', 
+                desc: 'Your data is encrypted and never shared. We respect your privacy.'
+              },
+              { 
+                icon: <Smartphone />, 
+                title: 'Mobile First', 
+                desc: 'Optimized for smartphones so you can check anywhere, anytime.'
+              },
+              { 
+                icon: <Zap />, 
+                title: 'Instant Results', 
+                desc: 'Get your predictions in seconds, not hours. No waiting required.'
+              },
+              { 
+                icon: <Globe />, 
+                title: 'Regional Data', 
+                desc: 'School information organized by region for easy navigation.'
+              }
+            ].map((feature, i) => (
+              <div key={i} className="feature-card">
+                <div className="feature-icon">{feature.icon}</div>
+                <h3>{feature.title}</h3>
+                <p>{feature.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="reveal-section py-32 bg-slate-900 text-white text-center">
+      {/* Social Proof Section */}
+      <section className="section social-proof-section">
         <div className="container">
-          <h2 className="text-5xl font-black mb-8">Ready to secure your spot?</h2>
-          <p className="text-xl opacity-60 mb-12 max-w-2xl mx-auto">Join over 50,000 Ghanaian families who use ChanceSHS to take the stress out of school placement.</p>
-          <Link href="/calculator" className="btn-primary large inline-flex">
-            Get Started Now — It's Free
-          </Link>
+          <div className="social-proof-grid">
+            <div className="social-proof-content">
+              <h2 className="section-title">Trusted by thousands of Ghanaian families</h2>
+              <p className="section-subtitle mb-8">
+                Join over 50,000 students and parents who used ChanceSHS to make informed placement decisions in 2024.
+              </p>
+              
+              <div className="social-proof-stats">
+                <div className="sp-stat">
+                  <div className="sp-value">50,000+</div>
+                  <div className="sp-label">Happy Users</div>
+                </div>
+                <div className="sp-stat">
+                  <div className="sp-value">98%</div>
+                  <div className="sp-label">Accuracy Rate</div>
+                </div>
+                <div className="sp-stat">
+                  <div className="sp-value">4.8/5</div>
+                  <div className="sp-label">User Rating</div>
+                </div>
+              </div>
+
+              <Link href="/calculator" className="btn-primary mt-12">
+                Start Your Prediction <ArrowRight size={20} />
+              </Link>
+            </div>
+
+            <div className="social-proof-testimonials">
+              {[
+                {
+                  text: "The prediction was spot on! I got my first choice, Achimota School. This tool gave me confidence during the selection process.",
+                  name: "Emmanuel A.",
+                  school: "Achimota School",
+                  year: "2024"
+                },
+                {
+                  text: "I was so worried about my aggregate of 12. ChanceSHS helped me choose the right schools and I got placed in my second choice!",
+                  name: "Sarah M.",
+                  school: "Wesley Girls",
+                  year: "2024"
+                },
+                {
+                  text: "A revolutionary tool for Ghanaian education. It simplifies the complex CSSPS process into something students can understand.",
+                  name: "Kwame O.",
+                  school: "PRESEC Legon",
+                  year: "2023"
+                }
+              ].map((testimonial, i) => (
+                <div key={i} className="testimonial-card">
+                  <div className="stars">
+                    {[1, 2, 3, 4, 5].map(s => <Star key={s} size={16} fill="#F5A623" color="#F5A623" />)}
+                  </div>
+                  <p className="testimonial-text">"{testimonial.text}"</p>
+                  <div className="testimonial-author">
+                    <div className="author-avatar">
+                      {testimonial.name.charAt(0)}
+                    </div>
+                    <div className="author-info">
+                      <div className="author-name">{testimonial.name}</div>
+                      <div className="author-school">{testimonial.school}, Class of {testimonial.year}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
+      {/* CTA Section */}
+      <section className="section cta-section">
+        <div className="container">
+          <div className="cta-content">
+            <div className="cta-badge">
+              <Sparkles size={16} className="text-amber-500" /> It's completely free
+            </div>
+            <h2 className="cta-title">Ready to know your shot?</h2>
+            <p className="cta-description">
+              Join thousands of Ghanaian students who took control of their SHS placement journey. 
+              Get your personalized prediction in under 2 minutes.
+            </p>
+            <div className="cta-actions">
+              <Link href="/calculator" className="btn-primary large">
+                Start My Prediction <ArrowRight size={24} />
+              </Link>
+              <div className="cta-trust">
+                <Check size={20} />
+                <span>No credit card required</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="footer">
+        <div className="container">
+          <div className="footer-grid">
+            <div className="footer-brand">
+              <div className="footer-logo">
+                <div className="logo-icon">
+                  <Target size={24} />
+                </div>
+                <span className="logo-text">ChanceSHS</span>
+              </div>
+              <p className="footer-tagline">Know Your Shot. Own Your Future.</p>
+              <p className="footer-description">
+                Ghana's #1 BECE Placement Intelligence Platform. Helping students make informed decisions about their Senior High School education.
+              </p>
+              <div className="footer-social">
+                <a href="#" className="social-link"><MessageSquare size={20} /></a>
+                <a href="#" className="social-link"><Globe size={20} /></a>
+                <a href="#" className="social-link"><Users size={20} /></a>
+              </div>
+            </div>
+
+            <div className="footer-links">
+              <h4>Product</h4>
+              <Link href="/calculator">Calculator</Link>
+              <Link href="#">School Directory</Link>
+              <Link href="#">Premium Features</Link>
+              <Link href="#">For Schools</Link>
+            </div>
+
+            <div className="footer-links">
+              <h4>Resources</h4>
+              <Link href="#">How It Works</Link>
+              <Link href="#">Placement Guide</Link>
+              <Link href="#">School Categories</Link>
+              <Link href="#">FAQ</Link>
+            </div>
+
+            <div className="footer-links">
+              <h4>Company</h4>
+              <Link href="#">About Us</Link>
+              <Link href="#">Blog</Link>
+              <Link href="#">Careers</Link>
+              <Link href="#">Contact</Link>
+            </div>
+
+            <div className="footer-legal">
+              <h4>Legal</h4>
+              <Link href="#">Privacy Policy</Link>
+              <Link href="#">Terms of Service</Link>
+              <Link href="#">Cookie Policy</Link>
+            </div>
+          </div>
+
+          <div className="footer-bottom">
+            <div className="footer-copyright">
+              © 2024 ChanceSHS. All rights reserved. Built with ❤️ in Ghana.
+            </div>
+            <div className="footer-made">
+              Made for Ghanaian students, by Ghanaian students
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
