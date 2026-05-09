@@ -5,6 +5,8 @@ import * as XLSX from 'xlsx';
 import path from 'path';
 import fs from 'fs';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const filePath = path.join(process.cwd(), 'src/assets/data/schooldata.xlsx');
 
