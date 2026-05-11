@@ -150,7 +150,7 @@ export default function Header() {
                   className="mobile-cta"
                 >
                   <div className="cta-icon">
-                    <TrendingUp size={20} />
+                    <BarChart2 size={20} />
                   </div>
                   <div className="cta-content">
                     <span className="cta-label">Check My Chances</span>
