@@ -765,6 +765,7 @@ export default function PremiumReport({
                   <Brain size={14} className="comp-icon" />
                   <p>{course} at <strong>{school.schoolName}</strong> — {school.programCompatibility >= 80 ? 'your grades are a strong match for this programme' : school.programCompatibility >= 60 ? 'your grades are reasonably aligned with this programme' : 'this programme is highly competitive — consistent high grades are usually required'}. <em>Course Fit: {school.programCompatibility}%</em></p>
                 </div>
+                {school.factors && (
                 <div className="detail-section">
                   <h4 className="detail-title">What Affected Your Score</h4>
                   <div className="factor-grid">
@@ -808,6 +809,7 @@ export default function PremiumReport({
                     </div>
                   </div>
                 </div>
+                )}
 
                 <div className="detail-section">
                   <h4 className="detail-title">Why We Say This</h4>
