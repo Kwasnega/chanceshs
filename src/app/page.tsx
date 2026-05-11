@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ChevronRight, Target, TrendingUp, ShieldCheck, Star, ArrowRight, Sparkles, GraduationCap, Users, Zap, MessageSquare, Globe, BarChart3, Lock, Smartphone, Clock, Check, Quote } from 'lucide-react';
+import { ChevronRight, ArrowRight, Sparkles, GraduationCap, Users, Zap, Globe, Lock, Smartphone, Check, Quote, Star, Target } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import './Home.css';
 
@@ -215,47 +215,23 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Floating phone mockup */}
+        {/* Hero image — Ghanaian students */}
         <motion.div
-          className="hero-phone-wrap"
-          style={{ y: heroParallax }}
-          initial={{ x: 100, opacity: 0 }}
+          className="hero-image-wrap"
+          initial={{ x: 80, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 1.2, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 1.2, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="phone-frame">
-            <div className="phone-notch" />
-            <div className="phone-screen">
-              <div className="ps-header">
-                <div className="ps-logo">C</div>
-                <div className="ps-title">ChanceSHS</div>
-              </div>
-              <div className="ps-aggregate-card">
-                <div className="psa-label">Your Aggregate</div>
-                <div className="psa-value">08</div>
-                <div className="psa-badge">Excellent</div>
-              </div>
-              <div className="ps-schools">
-                {[
-                  { name: 'Achimota School', pct: 92 },
-                  { name: 'PRESEC Legon', pct: 87 },
-                  { name: 'Wesley Girls', pct: 95 },
-                  { name: "St. Mary's SHS", pct: 78 },
-                ].map((s, i) => (
-                  <div key={i} className="ps-school-row">
-                    <span className="pssr-name">{s.name}</span>
-                    <div className="pssr-bar-wrap">
-                      <div className="pssr-bar" style={{ width: `${s.pct}%` }} />
-                    </div>
-                    <span className="pssr-pct">{s.pct}%</span>
-                  </div>
-                ))}
-              </div>
-              <div className="ps-cta-btn">Calculate Now →</div>
-            </div>
+          <img
+            src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=900&q=80&auto=format&fit=crop"
+            alt="Ghanaian students writing BECE exams"
+            className="hero-img"
+          />
+          <div className="hero-img-gradient" />
+          <div className="hero-img-badge">
+            <span className="hib-dot" />
+            <span>940+ schools. Real data. Real results.</span>
           </div>
-          {/* Glow beneath phone */}
-          <div className="phone-glow" />
         </motion.div>
 
         {/* Scroll indicator */}
@@ -291,15 +267,14 @@ export default function Home() {
             <span className="eyebrow-line" /> The BECE Moment
           </div>
           <h2 className="narrative-headline section-reveal">
-            Three months that define<br />
-            <em>the next six years</em> of<br />
-            a Ghanaian student's life.
+            5 days that define<br />
+            <em>the next 3 years</em>.
           </h2>
           <p className="narrative-body section-reveal">
-            The CSSPS placement process is opaque. Cut-off aggregates shift. Schools fill up. Choices go wrong. Thousands of students and parents make decisions in the dark every year — picking schools by rumour, by guess, by hope.
+            BECE results drop. CSSPS gives you 5 days to choose your schools. Most families decide by rumour.
           </p>
           <p className="narrative-body narrative-body--gold section-reveal">
-            ChanceSHS changes that. We built the only tool in Ghana that shows you exactly where you stand — not in rough brackets, but in real percentages, for every school.
+            ChanceSHS shows you exactly where you stand — real percentages, not guesses.
           </p>
           <Link href="/calculator" className="narrative-cta section-reveal">
             See Your Chances <ArrowRight size={18} />
@@ -344,36 +319,32 @@ export default function Home() {
           </div>
 
           <div className="steps-timeline">
-            {[
+            {([
               {
                 num: '01',
-                icon: <Target size={32} />,
                 title: 'Enter Your Grades',
-                desc: 'Input your expected or actual BECE grades for all core and elective subjects. Our engine converts them to your CSSPS aggregate automatically.',
-                tag: 'Takes 60 seconds'
+                desc: 'Type in your BECE grades. We calculate your CSSPS aggregate and run the numbers instantly.',
+                tag: '60 seconds'
               },
               {
                 num: '02',
-                icon: <TrendingUp size={32} />,
-                title: 'Select Your Schools',
-                desc: 'Browse or search our full database of 940+ schools across all regions and categories. Pick up to 6 you are considering.',
+                title: 'Pick Your Schools',
+                desc: 'Search 940+ schools by region, category, or program. Pick the ones you care about.',
                 tag: '940+ schools'
               },
               {
                 num: '03',
-                icon: <ShieldCheck size={32} />,
-                title: 'See Your Exact Chances',
-                desc: 'Get percentage-based placement probabilities for every school, with insights on what aggregate you need and how competitive each school is this year.',
-                tag: 'Instant results'
+                title: 'See Your Real Chances',
+                desc: 'Get a percentage probability for each school — based on actual CSSPS data, not estimates.',
+                tag: 'Instant'
               }
-            ].map((step, i) => (
+            ] as Array<{num:string;title:string;desc:string;tag:string}>).map((step, i) => (
               <div key={i} className={`step-row ${i % 2 === 1 ? 'step-row--alt' : ''}`}>
                 <div className="step-num-col">
                   <div className="step-num">{step.num}</div>
                   {i < 2 && <div className="step-connector" />}
                 </div>
                 <div className="step-content-card feature-item">
-                  <div className="step-icon-wrap">{step.icon}</div>
                   <div className="step-tag">{step.tag}</div>
                   <h3 className="step-card-title">{step.title}</h3>
                   <p className="step-card-desc">{step.desc}</p>
@@ -402,35 +373,34 @@ export default function Home() {
 
           <div className="bento-grid">
             <div className="bento-card bento-card--wide feature-item">
-              <div className="bc-icon"><BarChart3 size={28} /></div>
               <div className="bc-num">98%</div>
               <h3 className="bc-title">Prediction Accuracy</h3>
-              <p className="bc-desc">We cross-reference 5 years of historical CSSPS placement data. Every school's cut-off is tracked year-by-year so our estimates reflect reality — not guesswork.</p>
+              <p className="bc-desc">5 years of real CSSPS placement data. Every school's cut-off tracked, every year.</p>
             </div>
             <div className="bento-card bento-card--dark feature-item">
-              <div className="bc-icon"><GraduationCap size={28} /></div>
+              <div className="bc-accent"><GraduationCap size={24} /></div>
               <h3 className="bc-title">940+ Schools</h3>
-              <p className="bc-desc">Every public SHS in Ghana — Category A through D — across all 16 regions. No school is missing.</p>
+              <p className="bc-desc">Every public SHS in Ghana — Cat A through D. No school missing.</p>
             </div>
             <div className="bento-card feature-item">
-              <div className="bc-icon"><Lock size={28} /></div>
+              <div className="bc-accent"><Lock size={24} /></div>
               <h3 className="bc-title">100% Private</h3>
-              <p className="bc-desc">Your grades and school preferences are never stored or shared. We respect your family's privacy.</p>
+              <p className="bc-desc">Your grades are never stored or shared. Ever.</p>
             </div>
             <div className="bento-card feature-item">
-              <div className="bc-icon"><Smartphone size={28} /></div>
-              <h3 className="bc-title">Mobile First</h3>
-              <p className="bc-desc">Designed for smartphones first. Check anywhere — cyber café, home, or on the bus to the results centre.</p>
+              <div className="bc-accent"><Smartphone size={24} /></div>
+              <h3 className="bc-title">Works on Any Phone</h3>
+              <p className="bc-desc">Check from the results centre, the bus, or at home. No app needed.</p>
             </div>
             <div className="bento-card bento-card--gold feature-item">
-              <div className="bc-icon"><Zap size={28} /></div>
-              <h3 className="bc-title">Instant. No Waiting.</h3>
-              <p className="bc-desc">Results in under 3 seconds. No account, no registration, no waiting for an email. Just your data, immediately.</p>
+              <div className="bc-accent"><Zap size={24} /></div>
+              <h3 className="bc-title">Instant Results</h3>
+              <p className="bc-desc">No sign-up. No waiting. Your chances in 3 seconds.</p>
             </div>
             <div className="bento-card feature-item">
-              <div className="bc-icon"><Globe size={28} /></div>
+              <div className="bc-accent"><Globe size={24} /></div>
               <h3 className="bc-title">All 16 Regions</h3>
-              <p className="bc-desc">Regional placement insights so you know the competitive landscape in your area, not just nationally.</p>
+              <p className="bc-desc">See how competitive schools are in your area, not just nationally.</p>
             </div>
           </div>
         </div>
@@ -505,7 +475,7 @@ export default function Home() {
             <span>Are you?</span>
           </h2>
           <p className="fcta-sub section-reveal">
-            In under 2 minutes, you'll know exactly which schools you should be choosing — and which ones are reaches, targets, or locks.
+            2 minutes. Put your grades in. Get your real chances out. No account needed.
           </p>
           <Link href="/calculator" className="fcta-btn section-reveal">
             Calculate My Chances Now <ArrowRight size={22} />
@@ -530,11 +500,9 @@ export default function Home() {
                 <span className="ft-logo-text">ChanceSHS</span>
               </div>
               <p className="ft-tagline">Know Your Shot. Own Your Future.</p>
-              <p className="ft-desc">Ghana's #1 BECE Placement Intelligence Platform — helping students make informed decisions about their Senior High School education.</p>
+              <p className="ft-desc">Ghana's #1 BECE placement tool — helping students choose the right SHS with confidence.</p>
               <div className="ft-socials">
-                <a href="#" className="ft-social"><MessageSquare size={18} /></a>
-                <a href="#" className="ft-social"><Globe size={18} /></a>
-                <a href="#" className="ft-social"><Users size={18} /></a>
+                <a href="https://wa.me/233000000000" className="ft-social" aria-label="WhatsApp"><Users size={18} /></a>
               </div>
             </div>
 
@@ -542,22 +510,18 @@ export default function Home() {
               <div className="ft-col">
                 <h4>Product</h4>
                 <Link href="/calculator">Calculator</Link>
-                <Link href="#">School Directory</Link>
+                <Link href="/schools">School Directory</Link>
                 <Link href="/pricing">Premium</Link>
-                <Link href="#">For Schools</Link>
               </div>
               <div className="ft-col">
                 <h4>Resources</h4>
-                <Link href="#how-it-works">How It Works</Link>
+                <Link href="/#how-it-works">How It Works</Link>
                 <Link href="/faq">FAQ</Link>
-                <Link href="#">Placement Guide</Link>
-                <Link href="#">School Categories</Link>
+                <Link href="/alerts">Results Alerts</Link>
               </div>
               <div className="ft-col">
-                <h4>Legal</h4>
-                <Link href="#">Privacy Policy</Link>
-                <Link href="#">Terms of Service</Link>
-                <Link href="#">Cookie Policy</Link>
+                <h4>Contact</h4>
+                <a href="mailto:hello@chanceshs.com">hello@chanceshs.com</a>
               </div>
             </div>
           </div>

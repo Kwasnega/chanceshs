@@ -1,22 +1,42 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, X, ChevronRight, Sparkles, Target, ShieldCheck, TrendingUp } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronRight, Compass, CreditCard, HelpCircle, BookOpen, BarChart2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Header.css';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY < 60) {
+        setVisible(true);
+      } else if (currentY > lastScrollY + 8) {
+        setVisible(false);
+        setIsMenuOpen(false);
+      } else if (currentY < lastScrollY - 8) {
+        setVisible(true);
+      }
+      setLastScrollY(currentY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   const navItems = [
-    { href: '/#how-it-works', label: 'How it Works', icon: Target },
-    { href: '/pricing', label: 'Pricing', icon: Sparkles },
-    { href: '/faq', label: 'FAQ', icon: ShieldCheck },
+    { href: '/#how-it-works', label: 'How it Works', icon: Compass },
+    { href: '/schools', label: 'Schools', icon: BookOpen },
+    { href: '/pricing', label: 'Pricing', icon: CreditCard },
+    { href: '/faq', label: 'FAQ', icon: HelpCircle },
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-xl border-b border-gray-100/50 shadow-sm">
+    <header className={`fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100/60 shadow-sm transition-transform duration-300 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
@@ -41,7 +61,6 @@ export default function Header() {
                 href={item.href}
                 className="nav-link"
               >
-                <item.icon size={16} className="nav-icon" />
                 {item.label}
               </Link>
             ))}
@@ -49,7 +68,7 @@ export default function Header() {
               href="/calculator" 
               className="cta-button"
             >
-              <TrendingUp size={16} />
+              <BarChart2 size={16} />
               Check My Chances
             </Link>
           </nav>
