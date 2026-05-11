@@ -263,22 +263,36 @@ export default function Home() {
       ═══════════════════════════════════════════ */}
       <section className="narrative-section">
         <div className="narrative-inner">
-          <div className="narrative-eyebrow section-reveal">
-            <span className="eyebrow-line" /> The BECE Moment
+          <div className="narrative-text">
+            <div className="narrative-eyebrow section-reveal">
+              <span className="eyebrow-line" /> The BECE Moment
+            </div>
+            <h2 className="narrative-headline section-reveal">
+              5 days that define<br />
+              <em>the next 3 years</em>.
+            </h2>
+            <p className="narrative-body section-reveal">
+              BECE results drop. CSSPS gives you 5 days to choose your schools. Most families decide by rumour.
+            </p>
+            <p className="narrative-body narrative-body--gold section-reveal">
+              ChanceSHS shows you exactly where you stand — real percentages, not guesses.
+            </p>
+            <Link href="/calculator" className="narrative-cta section-reveal">
+              See Your Chances <ArrowRight size={18} />
+            </Link>
           </div>
-          <h2 className="narrative-headline section-reveal">
-            5 days that define<br />
-            <em>the next 3 years</em>.
-          </h2>
-          <p className="narrative-body section-reveal">
-            BECE results drop. CSSPS gives you 5 days to choose your schools. Most families decide by rumour.
-          </p>
-          <p className="narrative-body narrative-body--gold section-reveal">
-            ChanceSHS shows you exactly where you stand — real percentages, not guesses.
-          </p>
-          <Link href="/calculator" className="narrative-cta section-reveal">
-            See Your Chances <ArrowRight size={18} />
-          </Link>
+
+          <div className="narrative-image-col section-reveal">
+            <img
+              src="/becestudent.png"
+              alt="BECE student preparing for placement"
+              className="narrative-img"
+            />
+            <div className="narrative-img-overlay" />
+            <div className="narrative-img-caption">
+              Every placement decision starts with knowing your real odds.
+            </div>
+          </div>
         </div>
 
         {/* Big background text */}
