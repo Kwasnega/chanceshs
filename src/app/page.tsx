@@ -215,24 +215,24 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Hero image — Ghanaian students */}
-        <motion.div
-          className="hero-image-wrap"
-          initial={{ x: 80, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 1.2, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        >
+        {/* Hero photo — hero-student.png fills right half of viewport */}
+        <div className="hero-photo-panel">
           <img
-            src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=900&q=80&auto=format&fit=crop"
-            alt="Ghanaian students writing BECE exams"
-            className="hero-img"
+            src="/hero-student.png"
+            alt="Ghanaian student ready for BECE results"
+            className="hero-photo-img"
           />
-          <div className="hero-img-gradient" />
-          <div className="hero-img-badge">
+          <div className="hero-photo-fade" />
+          <motion.div
+            className="hero-img-badge"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1.1 }}
+          >
             <span className="hib-dot" />
             <span>940+ schools. Real data. Real results.</span>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
 
         {/* Scroll indicator */}
         <div className="hero-scroll">

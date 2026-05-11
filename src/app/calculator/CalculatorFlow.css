@@ -2627,26 +2627,67 @@ select:hover {
   border-color: #CBD5E1;
 }
 
-/* F1: Region quota toggle button on school chips */
-.chip-region-btn {
-  background: none;
-  border: 1px solid #CBD5E1;
-  border-radius: 6px;
-  width: 26px;
-  height: 26px;
+/* F1: Region panel — clean labeled rows replacing confusing emoji toggle */
+.region-panel {
+  margin-top: 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: #f8fafc;
+}
+.region-panel-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
+  gap: 7px;
   font-size: 0.875rem;
-  flex-shrink: 0;
-  transition: all 0.2s;
-  padding: 0;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 6px;
 }
-.chip-region-btn:hover { border-color: #94A3B8; background: #F1F5F9; }
-.chip-region-btn.region-yes { border-color: #10B981; background: #ECFDF5; }
-.chip-region-btn.region-no  { border-color: #F59E0B; background: #FFFBEB; }
-.chip-region-btn.region-unset { border-color: #CBD5E1; }
+.region-panel-sub {
+  font-size: 0.8125rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.region-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  border-top: 1px solid #e2e8f0;
+}
+.region-row:first-of-type { border-top: none; }
+.region-school-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+  flex: 1;
+  min-width: 120px;
+}
+.region-toggle-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.region-btn {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1.5px solid #cbd5e1;
+  background: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.region-btn:hover { border-color: #94a3b8; background: #f1f5f9; }
+.region-btn.active-yes { border-color: #10b981; background: #ecfdf5; color: #065f46; }
+.region-btn.active-no  { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+.region-btn.active-skip { border-color: #cbd5e1; background: #f1f5f9; color: #64748b; }
 
 /* F5: Data freshness banners */
 .data-stale-banner {

@@ -114,25 +114,28 @@
 }
 .ticker-count { font-size: 0.8125rem; color: var(--slate); font-weight: 500; }
 
-/* ══ HERO IMAGE ══ */
-.hero-image-wrap {
-  position: absolute; right: 5%; top: 50%; transform: translateY(-50%);
-  width: 42%; max-width: 580px; z-index: 3;
-  border-radius: 24px; overflow: hidden;
-  box-shadow: 0 40px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08);
+/* ══ HERO PHOTO PANEL — hero-student.png fills right 50% ══ */
+.hero-inner {
+  position: relative; z-index: 4;
+  max-width: 52%;
 }
-.hero-img {
-  width: 100%; height: 560px; object-fit: cover; display: block;
-  filter: brightness(0.88) saturate(1.15);
+.hero-photo-panel {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 50%; z-index: 2; overflow: hidden;
 }
-.hero-img-gradient {
+.hero-photo-img {
+  width: 100%; height: 100%; object-fit: cover; object-position: center top;
+  display: block;
+  filter: brightness(0.92) saturate(1.1);
+}
+.hero-photo-fade {
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 40%, rgba(10,14,23,0.55) 100%),
-              linear-gradient(135deg, rgba(10,14,23,0.25) 0%, transparent 40%);
+  background: linear-gradient(to right, var(--dark) 0%, transparent 22%),
+              linear-gradient(to top, rgba(10,14,23,0.55) 0%, transparent 40%);
   pointer-events: none;
 }
 .hero-img-badge {
-  position: absolute; bottom: 20px; left: 20px;
+  position: absolute; bottom: 28px; left: 28px;
   display: flex; align-items: center; gap: 8px;
   background: rgba(10,14,23,0.75); backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,0.12); border-radius: 100px;
@@ -348,7 +351,8 @@
    ══════════════════════════════ */
 @media (max-width: 1024px) {
   .hero-cinema { padding: 120px 32px 80px; }
-  .hero-image-wrap { display: none; }
+  .hero-photo-panel { display: none; }
+  .hero-inner { max-width: 100%; }
   .stats-monument-inner { grid-template-columns: repeat(2, 1fr); gap: 32px; }
   .bento-grid { grid-template-columns: 1fr 1fr; }
   .bento-card--wide { grid-column: span 2; }

@@ -52,6 +52,12 @@ export default function CalculatorFlow() {
   // F1: Per-school region flags (true = home district, false = out-of-region)
   const [regionFlags, setRegionFlags] = useState<Record<string, boolean>>({});
 
+  // UI modals (replace browser alert())
+  const [alertModal, setAlertModal]     = useState<{ show: boolean; title: string; message: string }>({ show: false, title: '', message: '' });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const showAlert = (title: string, message: string) => setAlertModal({ show: true, title, message });
+
   // Bundle alert prompt
   const [showBundleAlert, setShowBundleAlert]     = useState(false);
   const [bundleRef,       setBundleRef]           = useState('');
@@ -194,7 +200,7 @@ export default function CalculatorFlow() {
         const config = {
           reference: (new Date()).getTime().toString(),
           email: email || 'user@chanceshs.com',
-          amount: 2000, // GHS 20.00 in kobo/pesewas
+          amount: 3000, // GHS 30.00 in pesewas
           publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
           currency: 'GHS'
         };
@@ -207,7 +213,7 @@ export default function CalculatorFlow() {
 
   const handleLegacyPayment = () => {
     if (!email || !email.includes('@')) {
-      alert('Please enter a valid email to continue.');
+      showAlert('Email Required', 'Please enter a valid email address to continue with payment.');
       return;
     }
 
@@ -217,14 +223,14 @@ export default function CalculatorFlow() {
           console.log('Payment Successful:', reference);
           setPremium(true);
           setShowPremiumModal(false);
-          alert('Payment Successful! Premium features unlocked.');
+          setShowSuccessModal(true);
         },
         onClose: () => {
           console.log('Payment closed');
         }
       });
     } else {
-      alert('Payment system is initializing. Please try again in a moment.');
+      showAlert('Almost Ready', 'Payment is initializing. Please wait a moment and try again.');
     }
   };
 
@@ -301,7 +307,7 @@ export default function CalculatorFlow() {
     if (step === 1) {
       // Validate that raw score is entered
       if (rawScore === 0 || rawScore < 0 || rawScore > 600) {
-        alert('Please enter your raw score (0-600) before proceeding.');
+        showAlert('Raw Score Required', 'Please enter your BECE raw score (your total marks out of 600) before proceeding.');
         return;
       }
     }
@@ -887,21 +893,6 @@ export default function CalculatorFlow() {
                     >
                       <div className={`chip-cat cat-${school.category}`}>{school.category}</div>
                       <span className="chip-name">{school.name}</span>
-                      {/* F1: District/region quota toggle — only shown for boarding schools */}
-                      {((school as any).type === 'boarding' || school.category === 'A' || school.category === 'B') && (
-                        <button
-                          className={`chip-region-btn ${regionFlags[school.id] === true ? 'region-yes' : regionFlags[school.id] === false ? 'region-no' : 'region-unset'}`}
-                          title="Are you from this school's home region/district? Affects your slot pool size."
-                          onClick={() => setRegionFlags(prev => {
-                            const cur = prev[school.id];
-                            if (cur === undefined) return { ...prev, [school.id]: true };
-                            if (cur === true) return { ...prev, [school.id]: false };
-                            const next = { ...prev }; delete next[school.id]; return next;
-                          })}
-                        >
-                          {regionFlags[school.id] === true ? '🏠' : regionFlags[school.id] === false ? '🌍' : '📍'}
-                        </button>
-                      )}
                       <button 
                         className="chip-remove"
                         onClick={() => toggleSchool(school)}
@@ -918,11 +909,37 @@ export default function CalculatorFlow() {
                     </div>
                   )}
                 </div>
-                {/* F1: Region toggle hint */}
+                {/* F1: Region panel — only for boarding/cat-A/B schools */}
                 {selectedSchools.some((s: any) => s.type === 'boarding' || s.category === 'A' || s.category === 'B') && (
-                  <p style={{ fontSize: '0.8125rem', color: '#64748B', marginTop: '10px', lineHeight: '1.5' }}>
-                    📍 = region unknown &nbsp;·&nbsp; 🏠 = home district (+15% boost) &nbsp;·&nbsp; 🌍 = out-of-region (−10%). Tap the icon on boarding schools to set your region.
-                  </p>
+                  <div className="region-panel">
+                    <div className="region-panel-header">
+                      <MapPin size={14} />
+                      <span>Are you from any of these schools' home district?</span>
+                    </div>
+                    <p className="region-panel-sub">Home-district students compete for a larger share of boarding places (+15% boost). Out-of-region students compete for fewer spots (−10%). Leave blank if unsure.</p>
+                    {selectedSchools
+                      .filter((s: any) => s.type === 'boarding' || s.category === 'A' || s.category === 'B')
+                      .map((s) => (
+                        <div key={s.id} className="region-row">
+                          <span className="region-school-name">{s.name}</span>
+                          <div className="region-toggle-group">
+                            <button
+                              className={`region-btn ${regionFlags[s.id] === true ? 'active-yes' : ''}`}
+                              onClick={() => setRegionFlags(prev => ({ ...prev, [s.id]: true }))}
+                            >🏠 Home district</button>
+                            <button
+                              className={`region-btn ${regionFlags[s.id] === false ? 'active-no' : ''}`}
+                              onClick={() => setRegionFlags(prev => ({ ...prev, [s.id]: false }))}
+                            >🌍 Out of region</button>
+                            <button
+                              className={`region-btn ${regionFlags[s.id] === undefined ? 'active-skip' : ''}`}
+                              onClick={() => setRegionFlags(prev => { const n = { ...prev }; delete n[s.id]; return n; })}
+                            >Skip</button>
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </div>
                 )}
               </div>
 
@@ -1442,7 +1459,7 @@ export default function CalculatorFlow() {
                 </div>
                 <div>
                   <h3 className="premium-modal-title">Unlock Full Report</h3>
-                  <p className="premium-modal-subtitle">See everything about your chances — for just GHS 20</p>
+                  <p className="premium-modal-subtitle">See everything about your chances — for just GHS 30</p>
                 </div>
                 <button 
                   className="modal-close-btn"
@@ -1485,7 +1502,7 @@ export default function CalculatorFlow() {
               <div className="premium-pricing">
                 <div className="price-tag">
                   <span className="price-currency">GHS</span>
-                  <span className="price-amount">20.00</span>
+                  <span className="price-amount">30.00</span>
                   <span className="price-period">pay once</span>
                 </div>
                 <div className="price-value">
@@ -1518,7 +1535,7 @@ export default function CalculatorFlow() {
                     className="premium-cta"
                   >
                     <span className="cta-text">Unlock Premium</span>
-                    <span className="cta-price">GHS 20.00</span>
+                    <span className="cta-price">GHS 30.00</span>
                     <ChevronRight size={18} />
                   </button>
                 </div>
@@ -1678,6 +1695,127 @@ export default function CalculatorFlow() {
                   </div>
                 </>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Alert Modal (replaces browser alert()) ── */}
+      <AnimatePresence>
+        {alertModal.show && (
+          <motion.div
+            className="premium-modal-backdrop"
+            style={{ zIndex: 110 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setAlertModal(a => ({ ...a, show: false }))}
+          >
+            <motion.div
+              className="premium-modal"
+              style={{ maxWidth: '420px', padding: '32px 28px' }}
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#fef3c7,#fde68a)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+                </div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>{alertModal.title}</h3>
+              </div>
+              <p style={{ margin: '0 0 24px', fontSize: '0.9375rem', color: '#475569', lineHeight: 1.6 }}>{alertModal.message}</p>
+              <button
+                onClick={() => setAlertModal(a => ({ ...a, show: false }))}
+                style={{ width: '100%', padding: '13px', background: 'linear-gradient(135deg,#1e40af,#2563eb)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '0.9375rem', cursor: 'pointer' }}
+              >
+                Got it
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Payment Success Modal ── */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <motion.div
+            className="premium-modal-backdrop"
+            style={{ zIndex: 120 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            <motion.div
+              style={{ background: '#fff', borderRadius: '28px', padding: '48px 36px', maxWidth: '420px', width: '90%', textAlign: 'center', boxShadow: '0 32px 80px rgba(0,0,0,0.22)' }}
+              initial={{ scale: 0.85, opacity: 0, y: 40 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 280, delay: 0.05 }}
+            >
+              {/* Animated check ring */}
+              <motion.div
+                style={{ width: 90, height: 90, borderRadius: '50%', background: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', damping: 14, stiffness: 260, delay: 0.15 }}
+              >
+                <motion.svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                  <motion.path
+                    d="M9 22 L19 32 L36 13"
+                    stroke="#059669"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.55, delay: 0.35, ease: 'easeOut' }}
+                  />
+                </motion.svg>
+              </motion.div>
+
+              <motion.h2
+                style={{ margin: '0 0 10px', fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+              >
+                Payment Successful! 🎉
+              </motion.h2>
+              <motion.p
+                style={{ margin: '0 0 8px', color: '#059669', fontWeight: 700, fontSize: '1rem' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }}
+              >
+                GHS 30.00 received
+              </motion.p>
+              <motion.p
+                style={{ margin: '0 0 32px', color: '#64748b', fontSize: '0.9375rem', lineHeight: 1.6 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+              >
+                Your full premium report is now unlocked — including cut-off history, AI reasoning, detailed breakdown, strategic tips, and your personalised hidden opportunities.
+              </motion.p>
+
+              <motion.div
+                style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
+              >
+                {[
+                  { icon: '📊', text: '5-year cut-off history per school' },
+                  { icon: '🔍', text: 'Full AI reasoning for every prediction' },
+                  { icon: '🎯', text: 'Safe-bet picks & hidden opportunities' },
+                  { icon: '📄', text: 'Download your report as PDF' },
+                ].map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', borderRadius: '10px', padding: '10px 14px', textAlign: 'left' }}>
+                    <span style={{ fontSize: '1.1rem' }}>{f.icon}</span>
+                    <span style={{ fontSize: '0.875rem', color: '#334155', fontWeight: 600 }}>{f.text}</span>
+                  </div>
+                ))}
+              </motion.div>
+
+              <motion.button
+                onClick={() => setShowSuccessModal(false)}
+                style={{ marginTop: '28px', width: '100%', padding: '15px', background: 'linear-gradient(135deg,#1e40af,#2563eb)', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', letterSpacing: '0.01em' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.85 }}
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              >
+                View My Full Report →
+              </motion.button>
             </motion.div>
           </motion.div>
         )}
