@@ -8,14 +8,23 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// Helper to normalize email for consistent lookup
+function normalizeEmail(email: string): string {
+  return email.toLowerCase().trim();
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
+  const email = searchParams.get('email');
   const featureType = searchParams.get('featureType');
 
-  if (!userId) {
+  // C3 fix: Support both userId and email for lookup
+  const lookupId = email ? normalizeEmail(email) : userId;
+
+  if (!lookupId) {
     return NextResponse.json(
-      { error: 'Missing userId parameter' },
+      { error: 'Missing userId or email parameter' },
       { status: 400 }
     );
   }
@@ -23,19 +32,19 @@ export async function GET(request: NextRequest) {
   try {
     if (featureType) {
       // Check specific entitlement
-      const hasAccess = await checkUserEntitlement(userId, featureType as FeatureType);
+      const hasAccess = await checkUserEntitlement(lookupId, featureType as FeatureType);
       return NextResponse.json({
-        userId,
+        userId: lookupId,
         featureType,
         hasAccess
       });
     } else {
       // Get all entitlements
-      const entitlements = await getUserEntitlements(userId);
-      const user = await getUser(userId);
+      const entitlements = await getUserEntitlements(lookupId);
+      const user = await getUser(lookupId);
       
       return NextResponse.json({
-        userId,
+        userId: lookupId,
         entitlements,
         user: {
           email: user?.email,

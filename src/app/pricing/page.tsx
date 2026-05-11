@@ -4,8 +4,9 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, TrendingUp, Bell, Package, ShieldCheck, Smartphone, Clock, ArrowRight, Sparkles, Zap, CheckCircle2, AlertCircle } from 'lucide-react';
-// Note: ShieldCheck, Smartphone, Clock, Sparkles kept for sections below
 import PaymentFlow from '@/components/PaymentFlow';
+import EmailLogin from '@/components/EmailLogin';
+import { useAuth, getUserIdentifier } from '@/contexts/AuthContext';
 import './Pricing.css';
 
 export default function Pricing() {
@@ -19,24 +20,14 @@ export default function Pricing() {
 function PricingInner() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
+  const [pendingProduct, setPendingProduct] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const searchParams = useSearchParams();
+  const { user, email: authEmail, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
-  useEffect(() => {
-    const storedUserId = localStorage.getItem('chanceshs_user_id');
-    if (storedUserId) {
-      setUserId(storedUserId);
-    } else {
-      const newUserId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      setUserId(newUserId);
-      try {
-        localStorage.setItem('chanceshs_user_id', newUserId);
-      } catch (e) {
-        console.warn('localStorage not available, using session state only');
-      }
-    }
-  }, []);
+  // Use email as userId for payment tracking (C3 fix)
+  const userId = getUserIdentifier(authEmail);
 
   useEffect(() => {
     const success = searchParams.get('success');
@@ -59,8 +50,35 @@ function PricingInner() {
   }, [searchParams]);
 
   const handleProductClick = (productId: string, productName: string, price: number) => {
+    // C3 fix: Require authentication before purchase
+    if (!isAuthenticated || !authEmail) {
+      setPendingProduct(productId);
+      setShowEmailLogin(true);
+      return;
+    }
     setSelectedProduct({ id: productId, name: productName, price });
     setShowPaymentModal(true);
+  };
+
+  // Handle successful email login and continue with purchase
+  const handleEmailLoginSuccess = () => {
+    setShowEmailLogin(false);
+    if (pendingProduct) {
+      // Re-trigger the purchase flow
+      const productMap: Record<string, { name: string; price: number }> = {
+        'premium_report': { name: 'Premium Report', price: 30 },
+        'early_alert': { name: 'Early Placement Alert', price: 10 },
+        'shs_kit_bundler': { name: 'SHS Kit Bundler', price: 5 },
+        'bundle_complete': { name: 'Complete Bundle', price: 38 },
+        'bundle_full': { name: 'Full Bundle', price: 42 },
+      };
+      const product = productMap[pendingProduct];
+      if (product) {
+        setSelectedProduct({ id: pendingProduct, name: product.name, price: product.price });
+        setShowPaymentModal(true);
+      }
+      setPendingProduct(null);
+    }
   };
 
   const handlePaymentSuccess = (reference: string) => {
@@ -636,6 +654,30 @@ function PricingInner() {
           onClose={() => setShowPaymentModal(false)}
           onSuccess={handlePaymentSuccess}
         />
+      )}
+
+      {/* Email Login Modal (C3 fix) */}
+      {showEmailLogin && (
+        <div className="modal-backdrop" onClick={() => setShowEmailLogin(false)}>
+          <motion.div 
+            className="email-login-modal"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button 
+              className="modal-close-btn"
+              onClick={() => setShowEmailLogin(false)}
+            >
+              <X size={20} />
+            </button>
+            <EmailLogin 
+              onSuccess={handleEmailLoginSuccess}
+              redirectText="Enter your email to complete your purchase and access your purchase on any device"
+            />
+          </motion.div>
+        </div>
       )}
     </div>
   );

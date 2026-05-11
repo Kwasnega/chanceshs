@@ -1,187 +1,154 @@
-import { NextResponse } from 'next/server';
-import { predictionEngine, PredictionInput, ProgramType, SchoolData, SchoolTier, SchoolType, Competitiveness } from '@/lib/predictionEngine';
+import { NextRequest, NextResponse } from 'next/server';
+import { predictionEngine, PredictionInput, ProgramType } from '@/lib/predictionEngine';
+import { schoolCache } from '@/lib/schoolCache';
+import { buildSchoolData, buildFallbackSchoolData } from '@/lib/schoolBuilder';
+import { validatePredictInput } from '@/lib/inputValidation';
+import { logPredictionEvent, buildPredictionEvent } from '@/lib/telemetry';
+import { createLogger } from '@/lib/requestLogger';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+// F6: Simple in-process sliding window rate limiter (10 req / 60s per IP)
+// Upgrade to @upstash/ratelimit + @upstash/redis for multi-instance production use
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
+// O(1) entitlement check — reads a single Firebase path instead of scanning all payments.
+// Relies on createEntitlement() writing to users/{userId}/entitlements/{featureType}.
+async function checkPremiumEntitlement(userId: string): Promise<boolean> {
+  try {
+    const normalizedId = userId.toLowerCase().trim();
+    const { rtdb } = await import('@/lib/firebase');
+    const { ref, get } = await import('firebase/database');
+    // Single O(1) path read — scales to any number of users
+    const snap = await get(ref(rtdb, `users/${normalizedId}/entitlements/premium_report`));
+    return snap.exists() ? Boolean(snap.val()) : false;
+  } catch {
+    return false;
+  }
+}
+
+// Strip premium fields from results for free users
+function stripPremiumFields(result: any): any {
+  return {
+    schoolId: result.schoolId,
+    schoolName: result.schoolName,
+    probability: result.probability,
+    confidence: result.confidence,
+    category: result.category,
+    tier: result.tier,
+    programCompatibility: result.programCompatibility,
+    locked: result.locked,
+    safeBet: result.safeBet,
+    highRisk: result.highRisk,
+    // Strip detailed fields
+    probabilityRange: undefined,
+    reasoning: undefined,
+    factors: undefined,
+    safeBetScore: undefined,
+  };
+}
+
+export async function POST(request: NextRequest) {
+  // F6: Rate limit — 10 requests per minute per IP
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown';
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait a moment before trying again.' },
+      { status: 429, headers: { 'Retry-After': '60' } }
+    );
+  }
+
+  const log = createLogger(request);
+  const startMs = Date.now();
+
   try {
     const body = await request.json();
-    const { aggregate, rawScore, grades, schools, course } = body;
+    const { aggregate, rawScore, grades, schools, course, userId, schoolRegionFlags } = body;
 
-    console.log('Prediction request received:', { aggregate, rawScore, course, schoolCount: schools?.length });
-
-    if (!aggregate || !rawScore || !grades || !schools || !Array.isArray(schools)) {
-      console.error('Invalid request data:', { aggregate, rawScore, hasGrades: !!grades, hasSchools: !!schools });
-      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
+    // Validate and sanitize inputs
+    const validation = validatePredictInput(body);
+    if (!validation.valid) {
+      log.warn('predict.validation_fail', { error: validation.error });
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    // Map course to program type
+    log.info('predict.start', { course, schoolCount: schools?.length, hasUserId: !!userId });
+
+    // O(1) entitlement check using users/{userId}/entitlements node
+    const hasPremium = userId ? await checkPremiumEntitlement(userId) : false;
+
     const programTypeMap: Record<string, ProgramType> = {
       'General Science': ProgramType.SCIENCE,
-      'General Arts': ProgramType.GENERAL_ARTS,
-      'Business': ProgramType.BUSINESS,
-      'Agriculture': ProgramType.SCIENCE,
-      'Visual Arts': ProgramType.ARTS
+      'General Arts':    ProgramType.GENERAL_ARTS,
+      'Business':        ProgramType.BUSINESS,
+      'Agriculture':     ProgramType.SCIENCE,
+      'Visual Arts':     ProgramType.ARTS,
     };
-
     const programType = programTypeMap[course] || ProgramType.GENERAL_ARTS;
-    console.log('Program type mapped:', programType);
 
-    // Dynamically import Firebase
+    // Fetch school data — check cache first, only hit Firebase on miss
     const { rtdb } = await import('@/lib/firebase');
     const { ref, get } = await import('firebase/database');
 
-    // Fetch school data from Firebase for all selected schools
-    const schoolDataPromises = schools.map(async (school: any) => {
-      try {
-        const schoolRef = ref(rtdb, `schools/${school.id}`);
-        const snapshot = await get(schoolRef);
-        
-        if (snapshot.exists()) {
-          const firebaseSchool = snapshot.val();
-          
-          // Map Firebase school category to tier
-          const tierMap: Record<string, SchoolTier> = {
-            'A': SchoolTier.ELITE_A,
-            'B': SchoolTier.ELITE_B,
-            'C': SchoolTier.ELITE_C,
-            'D': SchoolTier.MID_TIER,
-            'E': SchoolTier.LOW_TIER
-          };
-          
-          const tier = tierMap[firebaseSchool.category] || SchoolTier.MID_TIER;
-          
-          // Determine school type based on Firebase data or default
-          const type = firebaseSchool.type === 'day' ? SchoolType.DAY : 
-                       firebaseSchool.type === 'boarding' ? SchoolType.BOARDING : 
-                       SchoolType.MIXED;
-          
-          // Map category to competitiveness
-          const competitivenessMap: Record<string, Competitiveness> = {
-            'A': Competitiveness.VERY_HIGH,
-            'B': Competitiveness.HIGH,
-            'C': Competitiveness.MEDIUM,
-            'D': Competitiveness.MEDIUM,
-            'E': Competitiveness.LOW
-          };
-          
-          const competitiveness = competitivenessMap[firebaseSchool.category] || Competitiveness.MEDIUM;
-          
-          // Build per-program cutoff arrays.
-          // Priority: explicit arrays in Firebase > year-keyed values > category defaults.
-          // programKey is the Firebase field to look up; numericOffset is the aggregate delta to apply.
-          const buildCutoffs = (programKey: 'science' | 'business' | 'arts', numericOffset: number): number[] => {
-            // 1. Explicit per-program array in Firebase — use as-is, no offset needed
-            if (Array.isArray(firebaseSchool.historicalCutoffs?.[programKey])) {
-              return firebaseSchool.historicalCutoffs[programKey];
-            }
-            // 2. Year-keyed values (e.g. { '2021': 7, '2022': 8, '2023': 7 }) + program offset
-            if (firebaseSchool.historicalCutoffs && typeof firebaseSchool.historicalCutoffs === 'object') {
-              const yearKeys = Object.keys(firebaseSchool.historicalCutoffs)
-                .filter(k => /^\d{4}$/.test(k))
-                .sort();
-              if (yearKeys.length > 0) {
-                return yearKeys.map(y => (firebaseSchool.historicalCutoffs[y] as number) + numericOffset);
-              }
-            }
-            // 3. Category-based defaults (science baseline), calibrated from real Ghana SHS data.
-            //    Gaps: Science=+0 | Business=tier-dependent | Arts=tier-dependent (see below).
-            const categoryDefaults: Record<string, number> = { A: 8, B: 12, C: 16, D: 20, E: 24 };
-            const base = (categoryDefaults[firebaseSchool.category] ?? 16) + numericOffset;
-            return [base]; // single point → engine uses tier-aware σ default (wider, honest)
-          };
-
-          // Tier-dependent program offsets.
-          // At Cat A/B schools: strong demand differentiation by program — gap is sharp (+1/+2).
-          // At Cat C schools:   moderate differentiation — gap compresses slightly.
-          // At Cat D/E schools: supply is less constrained — gap is small (≈+0.5/+1).
-          const isElite = tier === SchoolTier.ELITE_A || tier === SchoolTier.ELITE_B;
-          const businessOffset = isElite ? 1   : tier === SchoolTier.ELITE_C ? 0.8 : 0.5;
-          const artsOffset     = isElite ? 2   : tier === SchoolTier.ELITE_C ? 1.5 : 1;
-
-          // Course-specific accessibility adjustments.
-          // Agriculture → mapped to ProgramType.SCIENCE, but is ~1.5 agg points more accessible.
-          // Visual Arts  → mapped to ProgramType.ARTS,    but is ~1   agg point  more accessible.
-          // These offsets are applied only to the cutoff array the engine will actually read.
-          const courseAdj: Partial<Record<'science' | 'business' | 'arts', number>> =
-            course === 'Agriculture' ? { science:  1.5 } :
-            course === 'Visual Arts' ? { arts:     1.0 } : {};
-
-          // Create SchoolData object
-          const schoolData: SchoolData = {
-            id: school.id,
-            name: school.name,
-            tier,
-            type,
-            programs: [ProgramType.SCIENCE, ProgramType.GENERAL_ARTS, ProgramType.BUSINESS, ProgramType.ARTS],
-            competitiveness,
-            strengths: firebaseSchool.programStrengths || [],
-            weaknesses: firebaseSchool.programWeaknesses || [],
-            historicalCutoffs: {
-              science:  buildCutoffs('science',  0              + (courseAdj.science  ?? 0)),
-              business: buildCutoffs('business', businessOffset + (courseAdj.business ?? 0)),
-              arts:     buildCutoffs('arts',     artsOffset     + (courseAdj.arts     ?? 0))
-            },
-            demandLevel: tier === SchoolTier.ELITE_A ? 10 : 
-                         tier === SchoolTier.ELITE_B ? 8 :
-                         tier === SchoolTier.ELITE_C ? 6 :
-                         tier === SchoolTier.MID_TIER ? 4 : 2
-          };
-          
-          return schoolData;
+    const fbStart = Date.now();
+    let cacheHits = 0;
+    const schoolDataArray = await Promise.all(
+      schools.map(async (school: any) => {
+        // Cache hit
+        const cached = schoolCache.getById(school.id);
+        if (cached) { cacheHits++; return buildSchoolData(school.id, school.name, cached, course); }
+        // Cache miss — fetch from Firebase
+        try {
+          const snap = await get(ref(rtdb, `schools/${school.id}`));
+          if (snap.exists()) {
+            const fs = snap.val();
+            schoolCache.setById(school.id, fs);
+            return buildSchoolData(school.id, school.name, fs, course);
+          }
+        } catch (err) {
+          log.error('predict.firebase_miss', err, { schoolId: school.id });
         }
-      } catch (error) {
-        console.error('Error fetching school data for:', school.id, error);
-      }
-      
-      // Fallback for schools not in Firebase or on error.
-      // Category D defaults with honest uncertainty (small spread, not a uniform range).
-      return {
-        id: school.id,
-        name: school.name,
-        tier: SchoolTier.MID_TIER,
-        type: SchoolType.MIXED,
-        programs: [ProgramType.SCIENCE, ProgramType.GENERAL_ARTS, ProgramType.BUSINESS, ProgramType.ARTS],
-        competitiveness: Competitiveness.MEDIUM,
-        strengths: [],
-        weaknesses: [],
-        historicalCutoffs: {
-          science:  [23, 22, 22, 21],
-          business: [25, 24, 24, 23],
-          arts:     [26, 25, 25, 24]
-        },
-        demandLevel: 4
-      };
-    });
-
-    const schoolDataArray = await Promise.all(schoolDataPromises);
-    console.log('School data fetched:', schoolDataArray.length);
+        return buildFallbackSchoolData(school.id, school.name);
+      })
+    );
+    log.info('predict.schools_loaded', { total: schools.length, cacheHits, fbMs: Date.now() - fbStart });
 
     // Prepare input for prediction engine
     const predictionInput: PredictionInput = {
       aggregate,
       rawScore,
       grades: {
-        english: grades.english || 0,
-        math: grades.math || 0,
-        science: grades.science || 0,
-        socialStudies: grades.social || 0,
-        elective1: grades.el1 || 0,
-        elective2: grades.el2 || 0
+        english:       grades.english || 0,
+        math:          grades.math    || 0,
+        science:       grades.science || 0,
+        socialStudies: grades.social  || 0,
+        elective1:     grades.el1     || 0,
+        elective2:     grades.el2     || 0,
       },
-      program: programType,
-      selectedSchools: schools.map((s: any) => s.id)
+      program:        programType,
+      selectedSchools: schools.map((s: any) => s.id),
+      schoolRegionFlags: schoolRegionFlags ?? {},
     };
-
-    console.log('Prediction input prepared:', predictionInput);
 
     // Run anomaly detection
     const anomalyDetection = predictionEngine.detectAnomalies(predictionInput);
-    console.log('Anomaly detection complete');
-
-    // Get predictions from new engine with dynamic school data
     const predictions = predictionEngine.predictWithSchoolData(predictionInput, schoolDataArray);
-    console.log('Predictions generated:', predictions.length);
 
     // Map predictions to selected schools
     const results = schools.map((school: any, index: number) => {
@@ -225,7 +192,7 @@ export async function POST(request: Request) {
     const hiddenOpportunities = predictionEngine.findHiddenOpportunities(predictions, predictionInput);
 
     // Annotate results with safe-bet score and high-risk flag for UI
-    const annotatedResults = results.map(r => {
+    const annotatedResults = results.map((r: any) => {
       const sb = safeBets.find(s => s.schoolId === r.schoolId);
       return {
         ...r,
@@ -238,10 +205,37 @@ export async function POST(request: Request) {
     // Data manifest for UI provenance note
     const { DATA_MANIFEST } = await import('@/lib/dataManifest');
 
+    // Apply server-side premium gating (C2 fix)
+    let responseResults = annotatedResults;
+    let responseSafeBets = safeBets.slice(0, 5);
+    let responseHiddenOpportunities = hiddenOpportunities;
+    
+    if (!hasPremium) {
+      // Free users: only first 5 schools, stripped fields
+      responseResults = annotatedResults.slice(0, 5).map((r: any, index: number) => ({
+        ...stripPremiumFields(r),
+        locked: index >= 5, // All free results show as locked after index 4
+      }));
+      // Strip premium intelligence for free users
+      responseSafeBets = []; // Empty array - free users don't get safe bet list
+      responseHiddenOpportunities = []; // Empty array - free users don't get hidden opportunities
+    }
+
+    // Fire telemetry — non-blocking, errors are silently swallowed
+    logPredictionEvent(buildPredictionEvent(
+      aggregate,
+      course,
+      annotatedResults,
+      hasPremium,
+      schoolRegionFlags ?? {},
+    ));
+
+    log.perf('predict.complete', startMs, { isPremium: hasPremium, resultCount: responseResults.length });
+
     return NextResponse.json({
-      results:            annotatedResults,
-      safeBets:           safeBets.slice(0, 5),
-      hiddenOpportunities,
+      results:            responseResults,
+      safeBets:           responseSafeBets,
+      hiddenOpportunities: responseHiddenOpportunities,
       anomalyDetection:   anomalyDetection.hasAnomaly ? anomalyDetection : null,
       dataManifest: {
         version:     DATA_MANIFEST.version,
@@ -249,9 +243,30 @@ export async function POST(request: Request) {
         nextUpdate:  DATA_MANIFEST.nextUpdate,
         sourceNote:  DATA_MANIFEST.sourceNote,
       },
+      // Include premium status so client knows what it received
+      _premium: hasPremium,
     });
   } catch (error: any) {
-    console.error('Prediction API error:', error);
-    return NextResponse.json({ error: error.message || 'Prediction request failed' }, { status: 500 });
+    const log = createLogger(request);
+    // Distinguish Firebase connectivity failures from logic errors.
+    // Firebase errors contain 'FIREBASE' or network-level codes.
+    const isFirebaseDown =
+      error?.code?.startsWith('FIREBASE') ||
+      error?.message?.toLowerCase().includes('network') ||
+      error?.message?.toLowerCase().includes('firebase');
+
+    if (isFirebaseDown) {
+      log.error('predict.firebase_unavailable', error);
+      return NextResponse.json(
+        { error: 'Our data service is temporarily unavailable. Please try again in a moment.' },
+        { status: 503, headers: { 'Retry-After': '30' } }
+      );
+    }
+
+    log.error('predict.unhandled_error', error);
+    return NextResponse.json(
+      { error: 'Prediction request failed. Please try again.' },
+      { status: 500 }
+    );
   }
 }

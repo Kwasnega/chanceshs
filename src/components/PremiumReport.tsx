@@ -55,6 +55,10 @@ export default function PremiumReport({
   const [studentName, setStudentName] = useState('');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [nameInput, setNameInput] = useState('');
+  const [pdfError, setPdfError] = useState(false);
+  // F4: WhatsApp share consent preview
+  const [showWaPreview, setShowWaPreview] = useState(false);
+  const [waIncludeAggregate, setWaIncludeAggregate] = useState(true);
 
   const startDownload = () => {
     setNameInput(studentName);
@@ -96,8 +100,14 @@ export default function PremiumReport({
       }
       const safeName = name ? name.replace(/\s+/g, '_').toUpperCase() : 'STUDENT';
       pdf.save(`CHANCESHS_${safeName}_AGG${aggregate}.pdf`);
+      setPdfError(false);
     } catch (err) {
-      console.error('PDF Error:', err);
+      // F3: PDF fallback — html2canvas fails on Safari/iOS and complex CSS layouts
+      console.error('PDF generation failed, offering print fallback:', err);
+      setPdfError(true);
+      if (actionsEl) actionsEl.style.visibility = '';
+      // Restore visibility before print dialog
+      window.print();
     } finally {
       if (actionsEl) actionsEl.style.visibility = '';
       setIsDownloading(false);
@@ -187,9 +197,15 @@ export default function PremiumReport({
   const strategyRecommendation =
     `We recommend: ${safeBetSchools.length > 0 ? `${safeBetSchools.length} Safe Bet school${safeBetSchools.length > 1 ? 's' : ''}` : '1–2 easier schools to add'}, ${compSchools.length} Competitive school${compSchools.length !== 1 ? 's' : ''}${highRiskSchools.length > 0 ? `, ${highRiskSchools.length} Dream/High-Risk school${highRiskSchools.length > 1 ? 's' : ''}` : ''}.`;
 
-  const whatsAppMsg = encodeURIComponent(
-    `Hi! I just checked my BECE school chances on ChanceSHS 🎓\n\n📊 Aggregate: ${aggregate < 10 ? `0${aggregate}` : aggregate}\n🏆 Top Choice: ${topSchool?.schoolName || 'N/A'} (${topSchool?.probability || 0}% chance)\n📈 Average Chance: ${averageProbability.toFixed(0)}%${safeBetSchools.length > 0 ? `\n✅ Safe Schools: ${safeBetSchools.slice(0, 2).map(s => s.schoolName).join(', ')}` : ''}\n\nCheck your chances at: https://chanceshs.com`
-  );
+  // F4: Build WhatsApp message with optional aggregate
+  const buildWaMsg = (includeAgg: boolean) =>
+    `Hi! I just checked my BECE school chances on ChanceSHS 🎓\n\n${
+      includeAgg ? `📊 Aggregate: ${aggregate < 10 ? `0${aggregate}` : aggregate}\n` : ''
+    }🏆 Top Choice: ${topSchool?.schoolName || 'N/A'} (${topSchool?.probability || 0}% chance)\n📈 Average Chance: ${averageProbability.toFixed(0)}%${
+      safeBetSchools.length > 0 ? `\n✅ Safe Schools: ${safeBetSchools.slice(0, 2).map(s => s.schoolName).join(', ')}` : ''
+    }\n\nCheck your chances at: https://chanceshs.com`;
+
+  const whatsAppMsg = encodeURIComponent(buildWaMsg(waIncludeAggregate));
 
   return (
     <>
@@ -219,7 +235,67 @@ export default function PremiumReport({
         </div>
       )}
 
+      {/* F3: PDF generation failed — show print fallback notice */}
+      {pdfError && (
+        <div className="pdf-error-notice">
+          <AlertTriangle size={16} />
+          <span>PDF generation failed (common on Safari/iOS). Use <strong>Share → Print → Save as PDF</strong> in your browser instead.</span>
+          <button onClick={() => { setPdfError(false); window.print(); }} className="pdf-print-btn">Open Print Dialog</button>
+          <button onClick={() => setPdfError(false)} className="pdf-dismiss-btn">✕</button>
+        </div>
+      )}
+
+      {/* F4: WhatsApp share preview modal */}
+      {showWaPreview && (
+        <div className="wa-preview-overlay" onClick={() => setShowWaPreview(false)}>
+          <div className="wa-preview-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="wa-preview-title">📤 Preview your message</h3>
+            <p className="wa-preview-sub">This is what will be sent to your WhatsApp contacts</p>
+            <div className="wa-preview-bubble">
+              <pre className="wa-preview-text">{buildWaMsg(waIncludeAggregate)}</pre>
+            </div>
+            <label className="wa-aggregate-toggle">
+              <input
+                type="checkbox"
+                checked={waIncludeAggregate}
+                onChange={e => setWaIncludeAggregate(e.target.checked)}
+              />
+              <span>Include my aggregate ({aggregate < 10 ? `0${aggregate}` : aggregate}) in the message</span>
+            </label>
+            <div className="wa-preview-actions">
+              <button className="wa-preview-cancel" onClick={() => setShowWaPreview(false)}>Cancel</button>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(buildWaMsg(waIncludeAggregate))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="wa-preview-send"
+                onClick={() => setShowWaPreview(false)}
+              >
+                Send on WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="premium-report" id="premium-report">
+      {/* F5: Data freshness banner */}
+      {dataManifest && (() => {
+        const lastUpdate = new Date(dataManifest.lastUpdated);
+        const monthsOld = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24 * 30);
+        if (monthsOld > 26) return (
+          <div className="data-stale-banner data-stale-critical">
+            <AlertTriangle size={14} />
+            <span><strong>Data notice:</strong> These predictions use {new Date(dataManifest.lastUpdated).getFullYear()} cutoff data. Accuracy may be reduced for the current cycle. {dataManifest.nextUpdate && `Expected update: ${dataManifest.nextUpdate}.`}</span>
+          </div>
+        );
+        if (monthsOld > 14) return (
+          <div className="data-stale-banner data-stale-warning">
+            <span>ℹ️ Predictions use {new Date(dataManifest.lastUpdated).getFullYear()} data — directionally reliable, may not reflect this year's exact cutoffs.</span>
+          </div>
+        );
+        return null;
+      })()}
       <div className="report-header">
         <div className="header-content">
           <div className="report-branding">
@@ -446,15 +522,15 @@ export default function PremiumReport({
         </div>
       )}
 
-      {/* Confidence Analysis */}
+      {/* Prediction Quality Analysis (C6 fix - honest labeling) */}
       <div className="report-section confidence-analysis">
         <div className="section-header">
           <div className="section-icon">
             <Gauge size={24} />
           </div>
           <div>
-            <h2 className="section-title">How Sure Are We?</h2>
-            <p className="section-subtitle">This shows how reliable our predictions are for you</p>
+            <h2 className="section-title">How We Calculate Confidence</h2>
+            <p className="section-subtitle">Four factors that affect prediction reliability</p>
           </div>
         </div>
 
@@ -470,53 +546,53 @@ export default function PremiumReport({
                 />
               </div>
               <div className="gauge-value">{averageConfidence.toFixed(0)}%</div>
-              <div className="gauge-label">Overall Certainty</div>
+              <div className="gauge-label">Overall Prediction Confidence</div>
             </div>
           </div>
 
           <div className="confidence-breakdown">
             <div className="confidence-item">
               <div className="confidence-header">
-                <span className="confidence-name">Your Data</span>
+                <span className="confidence-name">1. Your Input Data</span>
                 <span className="confidence-score">{dataCompleteness === 100 ? 'Complete' : `${gradeValues.length}/6`}</span>
               </div>
               <div className="confidence-bar">
                 <div className="confidence-fill" style={{ width: `${dataCompleteness}%` }}></div>
               </div>
-              <p className="confidence-desc">{dataCompleteness === 100 ? 'You filled in all your grades' : 'Some grades were not provided'}</p>
+              <p className="confidence-desc">{dataCompleteness === 100 ? 'All 6 grades provided — full profile' : 'Some grades missing — prediction based on partial data'}</p>
             </div>
 
             <div className="confidence-item">
               <div className="confidence-header">
-                <span className="confidence-name">Past Data Match</span>
+                <span className="confidence-name">2. Historical Data Depth</span>
                 <span className="confidence-score">{confidenceLabel(Math.round(averageConfidence))}</span>
               </div>
               <div className="confidence-bar">
                 <div className="confidence-fill" style={{ width: `${Math.round(averageConfidence)}%` }}></div>
               </div>
-              <p className="confidence-desc">Based on {results.length} school{results.length !== 1 ? 's' : ''} with historical cutoff data</p>
+              <p className="confidence-desc">Based on years of cutoff data for {results.length} school{results.length !== 1 ? 's' : ''}. More years = higher confidence.</p>
             </div>
 
             <div className="confidence-item">
               <div className="confidence-header">
-                <span className="confidence-name">Subject Balance</span>
+                <span className="confidence-name">3. Grade Consistency</span>
                 <span className="confidence-score">{confidenceLabel(subjectBalance)}</span>
               </div>
               <div className="confidence-bar">
                 <div className="confidence-fill" style={{ width: `${subjectBalance}%` }}></div>
               </div>
-              <p className="confidence-desc">{subjectBalance >= 70 ? 'Your grades are fairly even across subjects' : 'Your grades vary significantly — some subjects much stronger than others'}</p>
+              <p className="confidence-desc">{subjectBalance >= 70 ? 'Even grades across subjects — predictable profile' : 'Uneven grades — harder to predict program fit'}</p>
             </div>
 
             <div className="confidence-item">
               <div className="confidence-header">
-                <span className="confidence-name">Course Fit</span>
+                <span className="confidence-name">4. Course Alignment</span>
                 <span className="confidence-score">{confidenceLabel(avgCourseFit)}</span>
               </div>
               <div className="confidence-bar">
                 <div className="confidence-fill" style={{ width: `${avgCourseFit}%` }}></div>
               </div>
-              <p className="confidence-desc">Your grades suit the {course} program{avgCourseFit >= 70 ? ' well' : ' — consider strengthening relevant subjects'}</p>
+              <p className="confidence-desc">How well your grades match {course} requirements at your chosen schools</p>
             </div>
           </div>
         </div>
@@ -692,41 +768,42 @@ export default function PremiumReport({
                 <div className="detail-section">
                   <h4 className="detail-title">What Affected Your Score</h4>
                   <div className="factor-grid">
+                    {/* S2 Fix: Updated factor names to match cleaned engine output */}
                     <div className="factor-item">
-                      <span className="factor-label">Your Aggregate</span>
+                      <span className="factor-label">Base Probability</span>
                       <div className="factor-bar">
-                        <div className="factor-fill" style={{ width: `${school.factors.aggregateScore || 0}%` }}></div>
+                        <div className="factor-fill" style={{ width: `${school.factors.baseProbability || 0}%` }}></div>
                       </div>
-                      <span className="factor-value">{school.factors.aggregateScore?.toFixed(1) || 0}%</span>
+                      <span className="factor-value">{school.factors.baseProbability?.toFixed(1) || 0}%</span>
                     </div>
                     <div className="factor-item">
-                      <span className="factor-label">Total Score Boost</span>
+                      <span className="factor-label">Tiebreaker Boost</span>
                       <div className="factor-bar">
-                        <div className={`factor-fill ${(school.factors.rawScoreAdjustment || 0) > 0 ? 'positive' : 'negative'}`} 
-                             style={{ width: `${Math.abs(school.factors.rawScoreAdjustment || 0) * 10}%` }}></div>
+                        <div className={`factor-fill ${(school.factors.rawScoreTiebreaker || 0) > 0 ? 'positive' : 'negative'}`}
+                             style={{ width: `${Math.abs(school.factors.rawScoreTiebreaker || 0) * 10}%` }}></div>
                       </div>
-                      <span className={`factor-value ${(school.factors.rawScoreAdjustment || 0) > 0 ? 'positive' : 'negative'}`}>
-                        {(school.factors.rawScoreAdjustment || 0) > 0 ? '+' : ''}{(school.factors.rawScoreAdjustment || 0).toFixed(1)}%
+                      <span className={`factor-value ${(school.factors.rawScoreTiebreaker || 0) > 0 ? 'positive' : 'negative'}`}>
+                        {(school.factors.rawScoreTiebreaker || 0) > 0 ? '+' : ''}{(school.factors.rawScoreTiebreaker || 0).toFixed(1)}%
                       </span>
                     </div>
                     <div className="factor-item">
-                      <span className="factor-label">Subject Grades</span>
+                      <span className="factor-label">Subject Alignment</span>
                       <div className="factor-bar">
-                        <div className={`factor-fill ${(school.factors.subjectStrengthAdjustment || 0) > 0 ? 'positive' : 'negative'}`} 
-                             style={{ width: `${Math.abs(school.factors.subjectStrengthAdjustment || 0) * 10}%` }}></div>
+                        <div className={`factor-fill ${(school.factors.electiveAlignment || 0) > 0 ? 'positive' : 'negative'}`}
+                             style={{ width: `${Math.abs(school.factors.electiveAlignment || 0) * 10}%` }}></div>
                       </div>
-                      <span className={`factor-value ${(school.factors.subjectStrengthAdjustment || 0) > 0 ? 'positive' : 'negative'}`}>
-                        {(school.factors.subjectStrengthAdjustment || 0) > 0 ? '+' : ''}{(school.factors.subjectStrengthAdjustment || 0).toFixed(1)}%
+                      <span className={`factor-value ${(school.factors.electiveAlignment || 0) > 0 ? 'positive' : 'negative'}`}>
+                        {(school.factors.electiveAlignment || 0) > 0 ? '+' : ''}{(school.factors.electiveAlignment || 0).toFixed(1)}%
                       </span>
                     </div>
                     <div className="factor-item">
-                      <span className="factor-label">Course Competition</span>
+                      <span className="factor-label">School Type Adjustment</span>
                       <div className="factor-bar">
-                        <div className={`factor-fill ${(school.factors.programCompetitivenessAdjustment || 0) > 0 ? 'positive' : 'negative'}`} 
-                             style={{ width: `${Math.abs(school.factors.programCompetitivenessAdjustment || 0) * 10}%` }}></div>
+                        <div className={`factor-fill ${(school.factors.schoolTypeAdjustment || 0) > 0 ? 'positive' : 'negative'}`}
+                             style={{ width: `${Math.abs(school.factors.schoolTypeAdjustment || 0) * 10}%` }}></div>
                       </div>
-                      <span className={`factor-value ${(school.factors.programCompetitivenessAdjustment || 0) > 0 ? 'positive' : 'negative'}`}>
-                        {(school.factors.programCompetitivenessAdjustment || 0) > 0 ? '+' : ''}{(school.factors.programCompetitivenessAdjustment || 0).toFixed(1)}%
+                      <span className={`factor-value ${(school.factors.schoolTypeAdjustment || 0) > 0 ? 'positive' : 'negative'}`}>
+                        {(school.factors.schoolTypeAdjustment || 0) > 0 ? '+' : ''}{(school.factors.schoolTypeAdjustment || 0).toFixed(1)}%
                       </span>
                     </div>
                   </div>
@@ -943,10 +1020,11 @@ export default function PremiumReport({
               {isSharing ? <Loader2 size={18} className="spin" /> : shareSuccess ? <Check size={18} /> : <Share2 size={18} />}
               <span>{isSharing ? 'Preparing...' : shareSuccess ? 'Shared!' : 'Share Report'}</span>
             </button>
-            <a href={`https://wa.me/?text=${whatsAppMsg}`} target="_blank" rel="noopener noreferrer" className="footer-action whatsapp-action">
+            {/* F4: Opens preview modal before sending — user can opt out of sharing aggregate */}
+            <button onClick={() => setShowWaPreview(true)} className="footer-action whatsapp-action">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
               <span>Share on WhatsApp</span>
-            </a>
+            </button>
           </div>
         </div>
         <div className="footer-legal">

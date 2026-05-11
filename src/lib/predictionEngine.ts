@@ -90,6 +90,8 @@ export interface PredictionInput {
   };
   program: ProgramType;
   selectedSchools: string[];
+  // F1: District quota — true = student is from school's home region/district
+  schoolRegionFlags?: Record<string, boolean>;
 }
 
 // Prediction Result Structure
@@ -103,14 +105,15 @@ export interface PredictionResult {
   tier: SchoolTier;
   reasoning: string;
   programCompatibility: number; // 0-100
+  // S2 Fix: Clean factors object - removed ghost fields, renamed confusing ones
   factors: {
-    aggregateScore: number;
-    rawScoreAdjustment: number;
-    subjectStrengthAdjustment: number;
-    programCompetitivenessAdjustment: number;
-    schoolTierAdjustment: number;
-    schoolTypeAdjustment: number;
-    historicalMatch: number;
+    baseProbability: number;           // core CDF result (P_cutoff * 100)
+    rawScoreTiebreaker: number;        // tiebreaker contribution (tWeight * tDelta * 100)
+    electiveAlignment: number;         // (electiveFactor - 1) * 100
+    schoolTypeAdjustment: number;      // (typeFactor - 1) * 100
+    projectedCutoff: number;           // renamed from historicalMatch
+    cutoffStdDev: number;              // stdDev used for probability range
+    cutoffTrendSlope: number;          // slope from trend analysis
   };
 }
 
@@ -384,9 +387,10 @@ export class MultiFactorPredictionEngine {
 
   /**
    * Trend-weighted mean — most recent years carry the most weight.
+   * Note: Empty array should be handled by caller with tier-aware defaults.
    */
   private trendWeightedMean(cutoffs: number[]): number {
-    if (cutoffs.length === 0) return 12;
+    if (cutoffs.length === 0) return 16; // Fallback only - caller should provide tier-aware default
     if (cutoffs.length === 1) return cutoffs[0];
     const rawW = cutoffs.map((_, i) => Math.pow(1.6, i));
     const total = rawW.reduce((s, w) => s + w, 0);
@@ -433,7 +437,14 @@ export class MultiFactorPredictionEngine {
     let maxSeverity = 0; // 0=none, 1=low, 2=medium, 3=high
 
     // Check 1: Aggregate vs raw score mismatch.
-    const expectedRaw = 600 - ((input.aggregate - 6) / 30) * 350;
+    // S1 Fix: Piecewise linear approximation from BECE data patterns (more accurate than single linear)
+    const meanRawForAggregate = (agg: number): number => {
+      if (agg <= 10) return 520 - (agg - 6) * 14;  // 6→520, 10→464
+      if (agg <= 18) return 464 - (agg - 10) * 16; // 10→464, 18→336
+      if (agg <= 30) return 336 - (agg - 18) * 14; // 18→336, 30→168
+      return 168 - (agg - 30) * 8;                 // 30→168, 36→120
+    };
+    const expectedRaw = meanRawForAggregate(input.aggregate);
     const rawVariance = Math.abs(input.rawScore - expectedRaw);
     if (rawVariance > 200) {
       anomalies.push(`Heads up! Your total mark (${input.rawScore}) and your aggregate (${input.aggregate}) don't quite add up. It's probably a typo — please go back and double-check what you entered.`);
@@ -548,14 +559,15 @@ export class MultiFactorPredictionEngine {
           tier: SchoolTier.LOW_TIER,
           reasoning: 'School data not available in prediction database',
           programCompatibility: 50,
+          // S2 Fix: Clean factors object
           factors: {
-            aggregateScore: 0,
-            rawScoreAdjustment: 0,
-            subjectStrengthAdjustment: 0,
-            programCompetitivenessAdjustment: 0,
-            schoolTierAdjustment: 0,
+            baseProbability: 0,
+            rawScoreTiebreaker: 0,
+            electiveAlignment: 0,
             schoolTypeAdjustment: 0,
-            historicalMatch: 0
+            projectedCutoff: 0,
+            cutoffStdDev: 0,
+            cutoffTrendSlope: 0
           }
         });
         continue;
@@ -580,9 +592,16 @@ export class MultiFactorPredictionEngine {
         category: PredictionCategory.DREAM, tier: school.tier,
         reasoning: `${school.name} does not offer this program.`,
         programCompatibility: 0,
-        factors: { aggregateScore: 0, rawScoreAdjustment: 0, subjectStrengthAdjustment: 0,
-                   programCompetitivenessAdjustment: 0, schoolTierAdjustment: 0,
-                   schoolTypeAdjustment: 0, historicalMatch: 0 }
+        // S2 Fix: Clean factors object
+        factors: {
+          baseProbability: 0,
+          rawScoreTiebreaker: 0,
+          electiveAlignment: 0,
+          schoolTypeAdjustment: 0,
+          projectedCutoff: 0,
+          cutoffStdDev: 0,
+          cutoffTrendSlope: 0
+        }
       };
     }
 
@@ -594,7 +613,14 @@ export class MultiFactorPredictionEngine {
     const rawCutoffs = school.historicalCutoffs[programKey] ?? school.historicalCutoffs.science ?? [];
     const cutoffs = rawCutoffs.filter((c): c is number => typeof c === 'number' && c > 0);
 
-    const wMean  = this.trendWeightedMean(cutoffs);
+    // Tier-aware default cutoffs when no data available (C5 fix)
+    const tierDefaultCutoff: Record<string, number> = {
+      [SchoolTier.ELITE_A]: 8, [SchoolTier.ELITE_B]: 12, [SchoolTier.ELITE_C]: 16,
+      [SchoolTier.MID_TIER]: 20, [SchoolTier.LOW_TIER]: 24
+    };
+    const wMean = cutoffs.length === 0
+      ? (tierDefaultCutoff[school.tier] ?? 16)
+      : this.trendWeightedMean(cutoffs);
     // Tier-aware σ fallback for schools with ≤1 data point.
     // These are intentionally WIDER than real computed σ values — they represent honest
     // uncertainty when we don't know which school within the tier this is.
@@ -607,7 +633,9 @@ export class MultiFactorPredictionEngine {
     const stdDev = cutoffs.length <= 1
       ? (tierDefaultStdDev[school.tier] ?? 1.5)
       : this.cutoffStdDev(cutoffs, wMean);
-    const slope  = this.cutoffTrend(cutoffs);
+    // S3 Fix: Only apply trend projection when there are >=3 years of data
+    // With <=2 points, the slope is noise, not signal — use zero trend
+    const slope = cutoffs.length >= 3 ? this.cutoffTrend(cutoffs) : 0;
     // Extrapolate half a step forward — positive slope = cutoff rising = school getting easier
     const rawProjection = wMean + slope * 0.5;
     // Clamp to physically valid range.
@@ -625,7 +653,14 @@ export class MultiFactorPredictionEngine {
     const P_cutoff = 1 - this.normalCDF(input.aggregate, projectedCutoff, stdDev);
 
     // ── Stage 4: Raw score as tiebreaker (multiplicative nudge only) ──────────
-    const meanRawForAgg = 600 - ((input.aggregate - 6) / 30) * 350;
+    // S1 Fix: Piecewise linear approximation from BECE data patterns
+    const meanRawForAgg = (() => {
+      const agg = input.aggregate;
+      if (agg <= 10) return 520 - (agg - 6) * 14;
+      if (agg <= 18) return 464 - (agg - 10) * 16;
+      if (agg <= 30) return 336 - (agg - 18) * 14;
+      return 168 - (agg - 30) * 8;
+    })();
     const rawPercentile = this.normalCDF(input.rawScore, meanRawForAgg, 40);
     const tiebreakWeights: Record<string, number> = {
       [SchoolTier.ELITE_A]: 0.12, [SchoolTier.ELITE_B]: 0.08,
@@ -665,27 +700,48 @@ export class MultiFactorPredictionEngine {
     const category = this.determineCategory(probability, school.tier);
     const reasoning = this.buildStatisticalReasoning(input, school, probability, projectedCutoff, slope, stdDev, electiveFactor, tDelta);
 
+    // F1: Apply district/regional quota factor.
+    // CSSPS reserves part of each boarding school's intake for home-district students,
+    // so out-of-region students compete for a smaller slot pool.
+    const inRegion = input.schoolRegionFlags?.[school.id];
+    let regionMultiplier = 1.0;
+    if (inRegion === true)  regionMultiplier = 1.15; // Home district: larger quota pool
+    if (inRegion === false) regionMultiplier = 0.90; // Out-of-region: smaller pool, stiffer competition
+    // Only meaningful for boarding schools — day schools have fixed local intake
+    const hasRegionSignal = school.type === SchoolType.BOARDING && inRegion !== undefined;
+    const adjustedProbability   = Math.min(97, Math.max(2, probability * (hasRegionSignal ? regionMultiplier : 1)));
+    const adjustedP_lower       = Math.min(97, Math.max(2, P_lower   * (hasRegionSignal ? regionMultiplier : 1)));
+    const adjustedP_upper       = Math.min(97, Math.max(2, P_upper   * (hasRegionSignal ? regionMultiplier : 1)));
+
+    // Append region note to reasoning if signal present
+    let finalReasoning = reasoning;
+    if (hasRegionSignal && inRegion === true)
+      finalReasoning += ' 🏠 Regional advantage: as a home-district student, you compete for a larger share of available places.';
+    if (hasRegionSignal && inRegion === false)
+      finalReasoning += ' 🌍 Out-of-region: you\'re competing for the non-district quota pool, which is smaller — this slightly reduces the chance.';
+
     return {
       schoolId: school.id,
       schoolName: school.name,
-      probability: Math.round(probability * 10) / 10,
+      probability: Math.round(adjustedProbability * 10) / 10,
       probabilityRange: {
-        lower: Math.round(P_lower * 10) / 10,
-        upper: Math.round(P_upper * 10) / 10
+        lower: Math.round(adjustedP_lower * 10) / 10,
+        upper: Math.round(adjustedP_upper * 10) / 10
       },
       confidence,
       category,
       tier: school.tier,
-      reasoning,
+      reasoning: finalReasoning,
       programCompatibility: 100,
+      // S2 Fix: Clean factors object - removed ghost fields, renamed confusing ones
       factors: {
-        aggregateScore:                    Math.round(P_cutoff * 100 * 10) / 10,
-        rawScoreAdjustment:                Math.round(tWeight * tDelta * 100 * 10) / 10,
-        subjectStrengthAdjustment:         Math.round((electiveFactor - 1) * 100 * 10) / 10,
-        programCompetitivenessAdjustment:  0,
-        schoolTierAdjustment:              0,
-        schoolTypeAdjustment:              Math.round((typeFactor - 1) * 100 * 10) / 10,
-        historicalMatch:                   Math.round(projectedCutoff * 10) / 10
+        baseProbability:      Math.round(P_cutoff * 100 * 10) / 10,
+        rawScoreTiebreaker:   Math.round(tWeight * tDelta * 100 * 10) / 10,
+        electiveAlignment:    Math.round((electiveFactor - 1) * 100 * 10) / 10,
+        schoolTypeAdjustment: Math.round((typeFactor - 1) * 100 * 10) / 10,
+        projectedCutoff:      Math.round(projectedCutoff * 10) / 10,
+        cutoffStdDev:         Math.round(stdDev * 10) / 10,
+        cutoffTrendSlope:   Math.round(slope * 100) / 100
       }
     };
   }
@@ -801,10 +857,10 @@ export class MultiFactorPredictionEngine {
       if (result.probability < 38 || result.probability > 88) continue;
 
       // Edge 1: Subject profile meaningfully beats aggregate
-      // Raw score + subject strength adjustments together > 5pp above aggregate baseline
+      // S2 Fix: Updated factor names - electiveAlignment and rawScoreTiebreaker
       const totalSubjectEdge =
-        (result.factors.subjectStrengthAdjustment || 0) +
-        (result.factors.rawScoreAdjustment || 0);
+        (result.factors.electiveAlignment || 0) +
+        (result.factors.rawScoreTiebreaker || 0);
 
       if (totalSubjectEdge >= 5) {
         opportunities.push({
@@ -819,10 +875,10 @@ export class MultiFactorPredictionEngine {
         continue;
       }
 
-      // Edge 2: Trend window — cutoff loosening (detected by historicalMatch factor proxy)
-      // historicalMatch in the new engine stores projectedCutoff (the rounded value)
+      // Edge 2: Trend window — cutoff loosening (detected by projectedCutoff factor)
+      // S2 Fix: Renamed from historicalMatch to projectedCutoff
       // A cutoff > aggregate + 3 with probability > 50 means the trend is softening fast
-      const projectedCutoff = result.factors.historicalMatch || 0;
+      const projectedCutoff = result.factors.projectedCutoff || 0;
       if (projectedCutoff > input.aggregate + 2 && result.probability >= 52) {
         opportunities.push({
           schoolId:         result.schoolId,
@@ -838,9 +894,11 @@ export class MultiFactorPredictionEngine {
 
       // Edge 3: Demand gap — strong probability at a school students systematically overlook
       // (MID_TIER or ELITE_C with probability >= 65 and high confidence)
+      // S4 Fix: Added pessimistic bound check — pessimistic case must still be viable (>=45%)
       if (
         result.probability >= 65 &&
         result.confidence  >= 68 &&
+        (result.probabilityRange?.lower ?? 0) >= 45 &&  // NEW: pessimistic bound must be viable
         result.tier !== SchoolTier.ELITE_A &&
         result.tier !== SchoolTier.ELITE_B &&
         result.tier !== SchoolTier.LOW_TIER

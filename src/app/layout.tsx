@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/components/layout/Header";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 export const metadata: Metadata = {
   title: "ChanceSHS | Ghana's #1 BECE Placement Intelligence",
@@ -42,10 +43,12 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <Header />
-        <main className="pt-16 min-h-screen">
-          {children}
-        </main>
+        <AuthProvider>
+          <Header />
+          <main className="pt-16 min-h-screen">
+            {children}
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );
