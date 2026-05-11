@@ -1,0 +1,261 @@
+/* Header Navigation Styles */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #475569;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.nav-link:hover {
+  color: #F5A623;
+  background: rgba(245, 166, 35, 0.08);
+}
+
+.nav-icon {
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+
+.nav-link:hover .nav-icon {
+  opacity: 1;
+}
+
+.cta-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #F5A623 0%, #FFD200 100%);
+  color: white;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  box-shadow: 0 4px 12px rgba(245, 166, 35, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  cursor: pointer;
+}
+
+.cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(245, 166, 35, 0.35);
+}
+
+.cta-button:active {
+  transform: translateY(0);
+}
+
+/* Mobile Navigation */
+.mobile-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  transition: all 0.3s;
+  color: #475569;
+  text-decoration: none;
+}
+
+.mobile-nav-item:hover {
+  background: rgba(245, 166, 35, 0.08);
+  color: #F5A623;
+}
+
+.nav-item-icon {
+  width: 44px;
+  height: 44px;
+  background: rgba(245, 166, 35, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F5A623;
+  flex-shrink: 0;
+}
+
+.nav-item-text {
+  font-weight: 700;
+  font-size: 1rem;
+  flex: 1;
+}
+
+.nav-item-arrow {
+  opacity: 0.4;
+  transition: all 0.3s;
+}
+
+.mobile-nav-item:hover .nav-item-arrow {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+/* Mobile CTA */
+.mobile-cta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, #F5A623 0%, #FFD200 100%);
+  border-radius: 16px;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(245, 166, 35, 0.3);
+  transition: all 0.3s;
+}
+
+.mobile-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(245, 166, 35, 0.4);
+}
+
+.cta-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.cta-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cta-label {
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: white;
+}
+
+.cta-sub {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cta-arrow {
+  color: white;
+  opacity: 0.8;
+  transition: all 0.3s;
+}
+
+.mobile-cta:hover .cta-arrow {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 0.875rem;
+  }
+
+  .nav-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .cta-button {
+    padding: 10px 18px;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 768px) {
+  header {
+    padding: 0 16px;
+  }
+
+  .nav-link {
+    display: none;
+  }
+
+  .cta-button {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  header {
+    padding: 0 16px;
+  }
+
+  .mobile-nav-item {
+    padding: 14px 16px;
+  }
+
+  .nav-item-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .nav-item-text {
+    font-size: 0.9375rem;
+  }
+
+  .mobile-cta {
+    padding: 16px;
+  }
+
+  .cta-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .cta-label {
+    font-size: 1rem;
+  }
+
+  .cta-sub {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 480px) {
+  header {
+    padding: 0 12px;
+  }
+
+  .mobile-nav-item {
+    padding: 12px 14px;
+  }
+
+  .nav-item-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .nav-item-text {
+    font-size: 0.875rem;
+  }
+
+  .mobile-cta {
+    padding: 14px;
+  }
+
+  .cta-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .cta-label {
+    font-size: 0.9375rem;
+  }
+
+  .cta-sub {
+    font-size: 0.75rem;
+  }
+}
