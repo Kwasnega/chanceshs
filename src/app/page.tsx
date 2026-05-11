@@ -191,9 +191,18 @@ export default function Home() {
             </span>
           </h1>
 
-          <p className="hero-sub">
+          <p className="hero-sub hero-sub--desktop">
             Enter your BECE grades. See your real probability of getting into every school — down to the percentage point. Built on 5 years of actual CSSPS placement data.
           </p>
+          <p className="hero-sub hero-sub--mobile">
+            Enter grades → see your real odds for every school. Built on 5 years of CSSPS data.
+          </p>
+
+          <div className="hero-trust-pills">
+            <span className="htp-pill">✓ Free</span>
+            <span className="htp-pill">✓ No account</span>
+            <span className="htp-pill">⚡ Results in 3 sec</span>
+          </div>
 
           <div className="hero-cta-group">
             <Link href="/calculator" className="cta-primary">
@@ -476,6 +485,11 @@ export default function Home() {
           FINAL CTA — GOLD TAKEOVER
       ═══════════════════════════════════════════ */}
       <section className="final-cta">
+        {/* classbece.png full background */}
+        <div className="fcta-bg-img">
+          <img src="/classbece.png" alt="BECE class" className="fcta-bg-photo" />
+          <div className="fcta-bg-overlay" />
+        </div>
         <div className="fcta-noise" />
         <div className="fcta-inner">
           <motion.div
