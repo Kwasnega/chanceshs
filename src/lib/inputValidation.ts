@@ -44,9 +44,9 @@ export function validatePredictInput(body: unknown): ValidationResult {
     return { valid: false, error: 'aggregate must be an integer between 6 and 54' };
   }
 
-  // rawScore
-  if (typeof b.rawScore !== 'number' || b.rawScore < 0 || b.rawScore > 100) {
-    return { valid: false, error: 'rawScore must be a number between 0 and 100' };
+  // rawScore: 0–600 (sum of 6 BECE subjects, each scored 0–100 raw marks)
+  if (typeof b.rawScore !== 'number' || b.rawScore < 0 || b.rawScore > 600) {
+    return { valid: false, error: 'rawScore must be a number between 0 and 600' };
   }
 
   // grades
@@ -61,7 +61,9 @@ export function validatePredictInput(body: unknown): ValidationResult {
     if (typeof key !== 'string' || key.length > 40) {
       return { valid: false, error: 'Grade keys must be strings of max 40 chars' };
     }
-    if (typeof val !== 'number' || !Number.isInteger(val) || val < 1 || val > 9) {
+    // Grades are CSSPS letter-grade equivalents: integer 1 (best) to 9 (weakest)
+    const n = typeof val === 'string' ? parseInt(val as string, 10) : val;
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < 1 || n > 9) {
       return { valid: false, error: `Grade "${key}" must be an integer between 1 and 9` };
     }
   }
@@ -117,8 +119,8 @@ export function validateSuggestInput(body: unknown): ValidationResult {
     return { valid: false, error: 'aggregate must be an integer between 6 and 54' };
   }
 
-  if (typeof b.rawScore !== 'number' || b.rawScore < 0 || b.rawScore > 100) {
-    return { valid: false, error: 'rawScore must be a number between 0 and 100' };
+  if (typeof b.rawScore !== 'number' || b.rawScore < 0 || b.rawScore > 600) {
+    return { valid: false, error: 'rawScore must be a number between 0 and 600' };
   }
 
   if (typeof b.grades !== 'object' || b.grades === null || Array.isArray(b.grades)) {
