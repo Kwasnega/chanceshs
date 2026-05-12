@@ -8,18 +8,24 @@ import './Header.css';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
       const currentY = window.scrollY;
-      if (currentY < 60) {
-        setVisible(true);
+      setScrolled(currentY > 50);
+      if (currentY < 50) {
+        // At the very top — hide completely
+        setVisible(false);
+        setIsMenuOpen(false);
       } else if (currentY > lastScrollY + 8) {
+        // Scrolling down — hide
         setVisible(false);
         setIsMenuOpen(false);
       } else if (currentY < lastScrollY - 8) {
+        // Scrolling up — show
         setVisible(true);
       }
       setLastScrollY(currentY);
@@ -36,7 +42,7 @@ export default function Header() {
   ];
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100/60 shadow-sm transition-transform duration-300 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}>
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'} ${scrolled ? 'bg-white/95 backdrop-blur-xl border-b border-gray-100/60 shadow-sm' : 'bg-transparent border-b border-transparent shadow-none'}`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
@@ -49,7 +55,7 @@ export default function Header() {
               />
             </div>
             <div className="hidden sm:block">
-              <span className="text-xl font-bold text-slate-900">ChanceSHS</span>
+              <span className={`text-xl font-bold transition-colors duration-300 ${scrolled ? 'text-slate-900' : 'text-white'}`}>ChanceSHS</span>
             </div>
           </Link>
 
@@ -59,7 +65,7 @@ export default function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="nav-link"
+                className={`nav-link ${scrolled ? 'nav-link-solid' : ''}`}
               >
                 {item.label}
               </Link>
@@ -75,7 +81,7 @@ export default function Header() {
 
           {/* Mobile Menu Toggle */}
           <button 
-            className="md:hidden p-2 rounded-xl hover:bg-slate-100 transition-colors relative"
+            className={`md:hidden p-2 rounded-xl transition-colors relative ${scrolled ? 'hover:bg-slate-100' : 'hover:bg-white/10'}`}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -85,20 +91,20 @@ export default function Header() {
                   rotate: isMenuOpen ? 45 : 0,
                   y: isMenuOpen ? 6 : 0
                 }}
-                className="absolute top-0 left-0 w-full h-0.5 bg-slate-900"
+                className={`absolute top-0 left-0 w-full h-0.5 transition-colors duration-300 ${scrolled ? 'bg-slate-900' : 'bg-white'}`}
               />
               <motion.div
                 animate={{
                   opacity: isMenuOpen ? 0 : 1
                 }}
-                className="absolute top-3 left-0 w-full h-0.5 bg-slate-900"
+                className={`absolute top-3 left-0 w-full h-0.5 transition-colors duration-300 ${scrolled ? 'bg-slate-900' : 'bg-white'}`}
               />
               <motion.div
                 animate={{
                   rotate: isMenuOpen ? -45 : 0,
                   y: isMenuOpen ? -6 : 0
                 }}
-                className="absolute top-6 left-0 w-full h-0.5 bg-slate-900"
+                className={`absolute top-6 left-0 w-full h-0.5 transition-colors duration-300 ${scrolled ? 'bg-slate-900' : 'bg-white'}`}
               />
             </div>
           </button>
@@ -112,7 +118,7 @@ export default function Header() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-white border-t border-gray-100"
+            className={`md:hidden border-t ${scrolled ? 'bg-white border-gray-100' : 'bg-white/95 backdrop-blur-xl border-gray-100/60'}`}
           >
             <nav className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
               <div className="space-y-2">

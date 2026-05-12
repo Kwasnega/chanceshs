@@ -7,12 +7,22 @@
   border-radius: 12px;
   font-weight: 600;
   font-size: 0.9375rem;
-  color: #475569;
+  color: rgba(255, 255, 255, 0.88);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
 
 .nav-link:hover {
+  color: #F5A623;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Solid state — applied when header is scrolled */
+.nav-link-solid {
+  color: #475569;
+}
+
+.nav-link-solid:hover {
   color: #F5A623;
   background: rgba(245, 166, 35, 0.08);
 }

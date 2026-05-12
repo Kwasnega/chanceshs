@@ -45,7 +45,7 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <Header />
-          <main className="pt-16 min-h-screen">
+          <main className="min-h-screen">
             {children}
           </main>
         </AuthProvider>

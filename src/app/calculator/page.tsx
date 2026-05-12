@@ -131,7 +131,7 @@ export default function CalculatorFlow() {
     }
     if (attempts >= 10) {
       console.log('Premium access poll timeout - manual refresh may be needed');
-      alert('Payment processing... If your report is not unlocked in 30 seconds, please refresh the page.');
+      showAlert('Still Processing', 'Payment processing… If your report is not unlocked in 30 seconds, please refresh the page.');
       return false;
     }
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -261,13 +261,13 @@ export default function CalculatorFlow() {
       return;
     }
     if (selectedSchools.length >= 6) {
-      alert('You can only pick up to 6 schools.');
+      showAlert('School Limit Reached', 'You can only pick up to 6 schools.');
       return;
     }
     // F2: Removed incorrect 'Cat A must be 1st choice' constraint — CSSPS does not require this
     // Only one Category A school allowed
     if (school.category === 'A' && selectedSchools.some(s => s.category === 'A')) {
-      alert('You can only choose one Category A school.');
+      showAlert('Category A Limit', 'You can only choose one Category A school.');
       return;
     }
     setSelectedSchools([...selectedSchools, school]);
@@ -366,7 +366,7 @@ export default function CalculatorFlow() {
       } catch (err: any) {
         console.error(err);
         setResults([]);
-        alert(err.message || 'Failed to generate predictions. Please try again.');
+        showAlert('Prediction Error', err.message || 'Failed to generate predictions. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -410,11 +410,11 @@ export default function CalculatorFlow() {
       if (data.success && data.authorizationUrl) {
         window.location.href = data.authorizationUrl;
       } else {
-        alert('Payment initialization failed. Please try again.');
+        showAlert('Payment Failed', 'Payment initialization failed. Please try again.');
       }
     } catch (error) {
       console.error('Payment error:', error);
-      alert('Payment initialization failed. Please try again.');
+      showAlert('Payment Failed', 'Payment initialization failed. Please try again.');
     }
   };
 
